@@ -11,77 +11,109 @@
 
 #define HASH_TABLE_SIZE 1024  // 해시 테이블 크기 설정
 
-// 단일 프로세스의 정보를 읽는 함수
-// TODO Process CMD도 받아올 수 있도록 추가
 int read_process_info(Process *proc) {
     char path[256];
     FILE *file;
+    int isKernalThread = 0;
 
-    // /proc/[PID]/stat 파일 열고 읽기
+    /**
+    * /proc/[PID]/cmdline
+    * To check whether process is kernal thread or not
+    */
+    snprintf(path, sizeof(path), "/proc/%d/cmdline", proc->pid);
+    file = fopen(path, "r");
+    if (file) {
+        if (fgets(proc->command, sizeof(proc->command), file) == NULL) {
+            isKernalThread = 1;
+        }
+        fclose(file);
+    } else {
+        strncpy(proc->command, "[unknown]", sizeof(proc->command));
+    }
+
+    /**
+    * /proc/[PID]/stat
+    * pid, priority, nice, state, cpu_usage, command 
+    */
     snprintf(path, sizeof(path), "/proc/%d/stat", proc->pid);
     file = fopen(path, "r");
     if (!file) return -1;
 
-    char comm[256];  // 커널 스레드 이름 또는 프로세스 이름 저장용
+    char comm[256];
     unsigned long utime, stime, starttime;
     fscanf(file, "%*d (%[^)]) %c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %d %d %*d %*u %lu",
         comm, &proc->state, &utime, &stime, &proc->priority, &proc->nice, &starttime);
 
-    // 커널 스레드 이름 또는 프로세스 이름을 command에 저장
     strncpy(proc->command, comm, sizeof(proc->command));
     proc->time = (utime + stime) / sysconf(_SC_CLK_TCK);
     fclose(file);
 
 
 
-    // /proc/[PID]/status 파일 열고 읽기
+    /**
+    * /proc/[PID]/status
+    * user, time, virt, res, shr
+    */
     snprintf(path, sizeof(path), "/proc/%d/status", proc->pid);
     file = fopen(path, "r");
     if (!file) return -1;
 
     char line[256];
     int uid = -1;
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "Uid:", 4) == 0) {    // user name
-            sscanf(line, "Uid: %d", &uid);
-            struct passwd *pw = getpwuid(uid);
-            if (pw) strncpy(proc->user, pw->pw_name, sizeof(proc->user));
-        } else if (strncmp(line, "VmSize:", 7) == 0) {  // VIRT
-            sscanf(line, "VmSize: %lu", &proc->virt);
-        } else if (strncmp(line, "VmRSS:", 6) == 0) {   // RES
-            sscanf(line, "VmRSS: %lu", &proc->res); 
-        } else if (strncmp(line, "RssFile:", 8) == 0) { // SHR
-            sscanf(line, "RssFile: %lu", &proc->shr);
+    if (isKernalThread) {
+            /**
+             * Kernal Thread's UID is generally 0 (that points root) 
+             * To reduce using memory, if Process is Kernal Thread 
+             * avoiding iteration will reduce memory resources?
+             */
+            strncpy(proc->user, "root", sizeof(proc->user));
+            proc->virt = 0;
+            proc->res = 0;
+            proc->shr = 0;
+        }
+    else {
+        while (fgets(line, sizeof(line), file)) {
+            if (strncmp(line, "Uid:", 4) == 0) {    // user name
+                sscanf(line, "Uid: %d", &uid);
+                struct passwd *pw = getpwuid(uid);
+                if (pw) strncpy(proc->user, pw->pw_name, sizeof(proc->user));
+            } else if (strncmp(line, "VmSize:", 7) == 0) {  // VIRT
+                sscanf(line, "VmSize: %lu", &proc->virt);
+            } else if (strncmp(line, "VmRSS:", 6) == 0) {   // RES
+                sscanf(line, "VmRSS: %lu", &proc->res); 
+            } else if (strncmp(line, "RssFile:", 8) == 0) { // SHR
+                sscanf(line, "RssFile: %lu", &proc->shr);
+            }
         }
     }
     fclose(file);
 
-    struct sysinfo info;        // memory usage
-    if (sysinfo(&info) == 0) {
-        proc->mem_usage = ((float)proc->res / (info.totalram / 1024)) * 100.0;
-    }
-
-
-    // /proc/[PID]/cmdline 파일 열고 읽기
-    snprintf(path, sizeof(path), "/proc/%d/cmdline", proc->pid);
-    file = fopen(path, "r");
-    if (file) {
-        if (fgets(proc->command, sizeof(proc->command), file) == NULL) {
-            proc->command[0] = '\0'; // 파일이 비었을 경우 빈 문자열로 초기화
-        }
-        fclose(file);
-    } else {
-        strncpy(proc->command, "[unknown]", sizeof(proc->command)); // 파일을 열 수 없는 경우 기본값
-    }
+    
 
     return 0;
 }
 
-// 모든 프로세스를 해시 테이블에 저장
+unsigned long long read_total_cpu_time() {
+    FILE *file = fopen("/proc/stat", "r");
+    if (!file) return 0;
+
+    unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
+    fscanf(file, "cpu %llu %llu %llu %llu %llu %llu %llu %llu",
+           &user, &nice, &system, &idle, &iowait, &irq, &softirq, &steal);
+    fclose(file);
+
+    return user + nice + system + idle + iowait + irq + softirq + steal;
+}
+
 int get_all_processes(HashTable *table) {
     DIR *proc_dir = opendir("/proc");
     struct dirent *entry;
     int count = 0;
+    struct sysinfo info;
+    unsigned long long total_cpu_time = read_total_cpu_time();
+    if (sysinfo(&info) == -1) {
+        perror("sysinfo");
+    }
 
     if (!proc_dir) return -1;
 
@@ -90,6 +122,8 @@ int get_all_processes(HashTable *table) {
             Process *proc = malloc(sizeof(Process));
             proc->pid = atoi(entry->d_name);
             if (read_process_info(proc) == 0) {
+                proc->mem_usage = ((float)proc->res / (info.totalram / 1024)) * 100.0;
+                proc->cpu_usage = ((float)proc->time / total_cpu_time) * 100.0;
                 insert_process(table, proc);
                 count++;
             } else {
