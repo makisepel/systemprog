@@ -8,6 +8,17 @@
 #include <sys/sysinfo.h>
 #include "proc_reader.h"
 
+// Add a child to the parent's children array
+void add_child(Process *parent, Process *child) {
+    parent->children = realloc(parent->children, sizeof(Process *) * (parent->child_count + 1));
+    if (!parent->children) {
+        perror("Failed to allocate memory for children");
+        exit(EXIT_FAILURE);
+    }
+
+    
+    parent->children[parent->child_count++] = (struct Process *)child;
+}
 
 int read_process_info(Process *proc) {
     char path[256];
@@ -39,9 +50,17 @@ int read_process_info(Process *proc) {
 
     char comm[256];
     unsigned long utime, stime, starttime;
-    fscanf(file, "%*d (%[^)]) %c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %d %d %*d %*u %lu",
-        comm, &proc->state, &utime, &stime, &proc->priority, &proc->nice, &starttime);
-
+    fscanf(file, "%d (%[^)]) %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %d %d %*d %*u %lu",
+            &proc->pid,          // PID: 1st field
+            comm,                // Command: 2nd field (wrapped in parentheses)
+            &proc->state,        // State: 3rd field
+            &proc->ppid,         // PPID: 4th field
+            &utime,              // utime: 14th field
+            &stime,              // stime: 15th field
+            &proc->priority,     // Priority: 18th field
+            &proc->nice,         // Nice: 19th field
+            &starttime);         // Start time: 22nd field
+    
     strncpy(proc->command, comm, sizeof(proc->command));
     proc->time = (utime + stime) / sysconf(_SC_CLK_TCK);
     fclose(file);
@@ -118,8 +137,31 @@ int get_all_processes(Process **processes, int max_count) {
     while ((entry = readdir(proc_dir)) != NULL && count < max_count) {
         if (isdigit(entry->d_name[0])) {
             processes[count] = malloc(sizeof(Process));
+            if (!processes[count]) {
+                perror("malloc error");
+                closedir(proc_dir);
+                return -1;
+            }
+
+            processes[count]->children = NULL;
+            processes[count]->child_count = 0;
+
             processes[count]->pid = atoi(entry->d_name);
             if (read_process_info(processes[count]) == 0) {
+                for (int i = 0; i < count; i++) {
+                    if (processes[i]->pid == processes[count]->ppid) {
+                        processes[i]->children = realloc(processes[i]->children, 
+                                                         sizeof(Process *) * (processes[i]->child_count + 1));
+                        if (!processes[i]->children) {
+                            perror("Failed to allocate memory for children array");
+                            free(processes[count]);
+                            closedir(proc_dir);
+                            return -1;
+                        }
+                        processes[i]->children[processes[i]->child_count++] = processes[count];
+                        break;
+                    }
+                }
                 processes[count]->mem_usage = ((float)processes[count]->res / (info.totalram / 1024)) * 100.0;
                 processes[count]->cpu_usage = ((float)processes[count]->time / total_cpu_time) * 100.0;
                 count++;
