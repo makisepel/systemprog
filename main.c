@@ -1,49 +1,64 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "process.h"
-#include "hash_table.h"
 #include "proc_reader.h"
+#include "sort.h"
+#include "system_reader.h"
 
-#define HASH_TABLE_SIZE 1024  // 해시 테이블의 크기
-
-void print_all_processes(HashTable *table) {
-    // 모든 해시 테이블 엔트리를 순회하며 프로세스 정보를 출력합니다.
-    for (int i = 0; i < table->size; i++) {
-        HashNode *node = table->table[i];
-        while (node) {
-            Process *proc = node->process;
-            // printf("PID: %d, User: %s, Priority: %d, Nice: %d, State: %c, CPU Usage: %.2f, Time: %lu, Virt: %lu, Res: %lu, Shr: %lu, Mem Usage: %.2f\n",
-            //        proc->pid, proc->user, proc->priority, proc->nice, proc->state, proc->cpu_usage, proc->time,
-            //        proc->virt, proc->res, proc->shr, proc->mem_usage);
-            printf("PID: %d, User: %s, Priority: %d, Nice: %d, State: %c, Command: %s\n",
-                    proc->pid, proc->user, proc->priority, proc->nice, proc->state, proc->command);
-
-            node = node->next;
-        }
-    }
-}
+#define MAX_PROCESSES 1024 
 
 int main() {
-    // 해시 테이블 생성
-    HashTable *table = create_hash_table(HASH_TABLE_SIZE);
+    Process *processes[MAX_PROCESSES] = {0};
+    unsigned long mem_used, mem_total, swap_used, swap_total;
+    float load_by_1min, load_by_5min, load_by_15min;
+    double uptime;
 
-    // 프로세스 정보를 해시 테이블에 저장
-    int process_count = get_all_processes(table);
-    if (process_count < 0) {
-        fprintf(stderr, "Failed to retrieve processes.\n");
-        free_hash_table(table);
-        return 1;
+    while (1) {
+        for (int i = 0; i < MAX_PROCESSES; i++) {
+            if (processes[i] != NULL) {
+                free(processes[i]);
+                processes[i] = NULL;
+            }
+        }
+
+        // 프로세스 리소스 읽어오는 함수
+        read_memory_usage(&mem_used, &mem_total);
+        read_swap_usage(&swap_used, &swap_total);
+        read_load_average(&load_by_1min, &load_by_5min, &load_by_15min);
+        read_uptime(&uptime);
+
+        int process_count = get_all_processes(processes, MAX_PROCESSES);
+        if (process_count < 0) {
+            perror("Failed to fetch processes");
+            exit(EXIT_FAILURE);
+        }
+        
+        // PID 기준으로 정렬
+        sort_processes(processes, process_count, compare_by_pid);
+
+        // USER 기준으로 정렬
+        // sort_processes(processes, process_count, compare_by_user);
+
+        // PRIORITY 기준으로 정렬
+        // sort_processes(processes, process_count, compare_by_priority);
+
+        // COMMAND 기준으로 정렬
+        // sort_processes(processes, process_count, compare_by_command);
+
+        // USER 기준으로 정렬
+        // sort_processes(processes, process_count, compare_by_user);
+
+        printf("Memory: %lu/%lu kB\n", mem_used, mem_total);
+        printf("Swap: %lu/%lu kB\n", swap_used, swap_total);
+        printf("Load average: %.2f, %.2f, %.2f\n", load_by_1min, load_by_5min, load_by_15min);
+        printf("Uptime: %.2f seconds\n", uptime);
+        
+        printf("==================\n\n");
+        print_processes(processes, process_count);
+
+        printf("==================\n\n");
+        sleep(1);
     }
-
-    printf("Total processes retrieved: %d\n\n", process_count);
-    printf("PID\tUSER\tPRI\tNI\tS\t%%CPU\tTIME+\tVIRT\tRES\tSHR\t%%MEM\n");
-    printf("-------------------------------------------------------------------\n");
-
-    // 해시 테이블에 저장된 모든 프로세스 정보를 출력
-    print_all_processes(table);
-
-    // 해시 테이블 해제
-    free_hash_table(table);
-
     return 0;
 }

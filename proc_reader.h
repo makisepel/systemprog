@@ -3,9 +3,8 @@
 #define PROC_READER_H
 
 #include "process.h"
-#include "hash_table.h"
 
 int read_process_info(Process *proc);
-int get_all_processes(HashTable *table);
+int get_all_processes(Process **processes, int max_count);
 
-#endif // PROC_READER_H
+#endif
