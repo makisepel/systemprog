@@ -60,12 +60,17 @@ int main() {
 
         // printf("==================\n\n");
 
-        for (int i = 0; i < process_count; i++) {
-        if (processes[i]->ppid == 0) {
-            print_tree(processes[i], 0);
+         for (int i = 0; i < MAX_PROCESSES; i++)
+        {
+            if (processes[i] == NULL)
+                continue;
+            else if (processes[i]->pid == 1)
+            { // 루트 프로세스 (PID가 0인 프로세스)인 경우
+                sort_children(processes[i]);
+            }
         }
-    }
-        sleep(10);
+        print_tree(processes[0], 0);
+        sleep(2);
     }
     return 0;
 }
