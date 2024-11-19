@@ -1,3 +1,5 @@
+// main.c
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -11,6 +13,7 @@
 #define MAX_PROCESSES 1024 
 
 int main() {
+    // process들을 받는 배열
     Process *processes[MAX_PROCESSES] = {0};
 
     // 시스템 리소스 변수
@@ -19,7 +22,7 @@ int main() {
     double uptime;
 
     while (1) {
-        // Initializing Proecss List (Processes)
+        // processes 배열 초기화
         for (int i = 0; i < MAX_PROCESSES; i++) {
             if (processes[i] != NULL) {
                 free(processes[i]);
@@ -34,7 +37,7 @@ int main() {
             &load_by_1min, &load_by_5min, &load_by_15min,
             &uptime);
 
-        // 출력 예시
+        // 프로세스 출력 예시
         // printf("Memory: %lu/%lu kB\n", mem_used, mem_total);
         // printf("Swap: %lu/%lu kB\n", swap_used, swap_total);
         // printf("Load average: %.2f, %.2f, %.2f\n", load_by_1min, load_by_5min, load_by_15min);
@@ -47,82 +50,25 @@ int main() {
             exit(EXIT_FAILURE);
         }
         
-        // PID 기준으로 정렬
+        // list일 경우, PID 기준으로 정렬하며 모든 comparator에 대해서는 sort.c 참조
         sort_list(processes, process_count, compare_by_pid_asc);
 
-        // USER 기준으로 정렬
-        // sort_list(processes, process_count, compare_by_user_asc);
-
-        // PRIORITY 기준으로 정렬
-        // sort_list(processes, process_count, compare_by_priority_asc);
-
-        // COMMAND 기준으로 정렬
-        // sort_list(processes, process_count, compare_by_command_asc);
-
-        // List 출력문
+        // list 출력
         print_list(processes, process_count);
 
         // tree 정렬
-        // for (int i = 0; i < MAX_PROCESSES; i++)
-        // {
-        //     if (processes[i] == NULL)
-        //         continue;
-        //     else if (processes[i]->pid == 1)
-        //     { // 루트 프로세스 (PID가 0인 프로세스)인 경우
+        // for (int i = 0; i < MAX_PROCESSES; i++) {
+        //     if (processes[i] == NULL) continue;
+        //     else if (processes[i]->pid == 1) { // 루트 프로세스 (PID가 0인 프로세스)인 경우
         //         sort_tree(processes[i], compare_by_pid_asc);
+        //         break;
         //     }
         // }
 
-        // tree 출력문
+        // tree 출력
         // print_tree(processes[0], 0);
+        
         sleep(10);
-
-
-        // int pid;
-        // printf("Enter PID to modify or kill: ");
-        // scanf("%d", &pid);
-
-        // int option;
-        // printf("Choose an action:\n");
-        // printf("1: Increase NICE value\n");
-        // printf("2: Decrease NICE value\n");
-        // printf("3: Kill process\n");
-        // printf("Enter your option: ");
-        // scanf("%d", &option);
-
-        // int result;
-
-        // switch (option) {
-        //     case 1:
-        //         result = increase_nice(pid);
-        //         if (result == 0) {
-        //             printf("Successfully increased NICE value for PID %d.\n", pid);
-        //         } else {
-        //             perror("Failed to increase NICE value");
-        //         }
-        //         break;
-        //     case 2:
-        //         result = decrease_nice(pid);
-        //         if (result == 0) {
-        //             printf("Successfully decreased NICE value for PID %d.\n", pid);
-        //         } else {
-        //             perror("Failed to decrease NICE value");
-        //         }
-        //         break;
-        //     case 3:
-        //         result = kill_process(pid);
-        //         if (result == 0) {
-        //             printf("Successfully killed process with PID %d.\n", pid);
-        //         } else {
-        //             perror("Failed to kill process");
-        //         }
-        //         break;
-        //     default:
-        //         printf("Invalid option. Please select a valid action.\n");
-        //         break;
-        // }
-
-
     }
     return 0;
 }

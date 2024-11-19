@@ -1,28 +1,26 @@
 /*
     print.c는 Process 구조체들을 main.c에서 저장하는 processes 배열에 대해,
-    Sorting된 결과를 시각적으로 확인하기 위한 코드입니다.
+    Sorting된 결과 구현 여부를 시각적으로 확인하기 위한 코드입니다.
+    TUI 구현에 있어서는 필요하지 않아, 자세한 설명은 생략합니다.
 */
 
 #include <stdio.h>
 #include "process.h"
 
-// Print the tree recursively
+// tree 형태를 재귀적으로 출력
 void print_tree(Process *process, int level) {
-    // Print indentation using '\t' for each level
     for (int i = 0; i < level; i++) {
-        printf("\t"); // Add tab for indentation
+        printf("\t");
     }
 
-    // Print process details
     printf("%d, Command: %s\n", process->pid, process->command);
 
-    // 재귀 호출
     for (int i = 0; i < process->child_count; i++) {
         print_tree(process->children[i], level + 1);
     }
 }
 
-// Print processes by list
+// 정렬된 processes 배열에 대해 list 형태를 출력
 void print_list(Process **processes, int count) {
     for (int i = 0; i < count; i++) {
         if (processes[i]->isKernalThread == 1) continue;
