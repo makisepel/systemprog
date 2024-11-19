@@ -161,10 +161,10 @@ int get_all_processes(Process **processes, int max_count) {
                         break;
                     }
                 }
-                add_children_from_tasks(processes[count], processes, &count);
 
                 processes[count]->mem_usage = ((float)processes[count]->res / (info.totalram / 1024)) * 100.0;
                 processes[count]->cpu_usage = ((float)processes[count]->time / total_cpu_time) * 100.0;
+                add_children_from_tasks(processes[count], processes, &count, info.totalram, total_cpu_time);
                 count++;
             } else {
                 free(processes[count]);
@@ -176,7 +176,7 @@ int get_all_processes(Process **processes, int max_count) {
     return count;
 }
 
-void add_children_from_tasks(Process *proc, Process **processes, int *cnt)
+void add_children_from_tasks(Process *proc, Process **processes, int *cnt, unsigned long totalram, unsigned long long total_cpu_time)
 {
     if (!proc) return;
 
@@ -208,6 +208,9 @@ void add_children_from_tasks(Process *proc, Process **processes, int *cnt)
                 child_thread->pid = tid;
                 if (read_process_info(child_thread) == 0) {
                     processes[++(*cnt)] = child_thread;
+                    //
+                    child_thread->mem_usage = ((float)child_thread->res / (totalram / 1024)) * 100.0;
+                    child_thread->cpu_usage = ((float)child_thread->time / total_cpu_time) * 100.0;
                     // add_child 함수 사용
                     add_child(proc, child_thread);
                 }
