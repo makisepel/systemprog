@@ -73,3 +73,17 @@ void read_uptime(double *uptime) {
     fscanf(file, "%lf", uptime);
     fclose(file);
 }
+
+// Unified function to call individual resource-reading functions
+void read_resource(
+    unsigned long *mem_used, unsigned long *mem_total,
+    unsigned long *swap_used, unsigned long *swap_total,
+    float *load1, float *load5, float *load15,
+    double *uptime) {
+
+    // Call individual functions to populate the values
+    read_memory_usage(mem_used, mem_total);
+    read_swap_usage(swap_used, swap_total);
+    read_load_average(load1, load5, load15);
+    read_uptime(uptime);
+}
