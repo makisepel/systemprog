@@ -1,3 +1,8 @@
+/*
+    control.c는 프로세스를 관리할 수 있는 코드이며
+    nice값의 조정을 통해 우선순위를 바꾸거나 kill 함수를 통해 프로세스를 강제종료 할 수 있습니다.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -6,60 +11,38 @@
 #include <unistd.h>
 
 /**
- * Increase the NICE value of a process (lower priority).
+ * @brief Nice 값을 상승시켜 우선순위를 낮추는 함수
+ * 
  * @param pid: Process ID.
  * @return: 0 on success, -1 on failure.
  */
 int increase_nice(int pid) {
     int current_nice = getpriority(PRIO_PROCESS, pid);
-    if (current_nice == -1 && errno != 0) {
-        perror("Failed to get NICE value");
-        return -1;
-    }
-
-    // Attempt to increase the NICE value
-    if (setpriority(PRIO_PROCESS, pid, current_nice + 1) == -1) {
-        perror("Failed to increase NICE value");
-        return -1;
-    }
-
-    printf("Successfully increased NICE value of PID %d to %d\n", pid, current_nice + 1);
+    if (current_nice == -1 && errno != 0) return -1;
+    if (setpriority(PRIO_PROCESS, pid, current_nice + 1) == -1) return -1;
     return 0;
 }
 
 /**
- * Decrease the NICE value of a process (higher priority).
+ * @brief Nice 값을 하락시켜 우선순위를 높이는 함수
+ * 
  * @param pid: Process ID.
  * @return: 0 on success, -1 on failure.
  */
 int decrease_nice(int pid) {
     int current_nice = getpriority(PRIO_PROCESS, pid);
-    if (current_nice == -1 && errno != 0) {
-        perror("Failed to get NICE value");
-        return -1;
-    }
-
-    // Attempt to decrease the NICE value
-    if (setpriority(PRIO_PROCESS, pid, current_nice - 1) == -1) {
-        perror("Failed to decrease NICE value");
-        return -1;
-    }
-
-    printf("Successfully decreased NICE value of PID %d to %d\n", pid, current_nice - 1);
+    if (current_nice == -1 && errno != 0) return -1;
+    if (setpriority(PRIO_PROCESS, pid, current_nice - 1) == -1) return -1;
     return 0;
 }
 
 /**
- * Kill the specified process.
+ * @brief 해당 PID의 프로세스에 대해 kill 명령을 보내는 함수
+ * 
  * @param pid: Process ID.
  * @return: 0 on success, -1 on failure.
  */
 int kill_process(int pid) {
-    if (kill(pid, SIGKILL) == -1) {
-        perror("Failed to kill process");
-        return -1;
-    }
-
-    printf("Successfully killed process with PID %d\n", pid);
+    if (kill(pid, SIGKILL) == -1) return -1;
     return 0;
 }
