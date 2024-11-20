@@ -131,8 +131,7 @@ int read_process_info(Process *proc) {
             &proc->priority,     // Priority: 18th field
             &proc->nice,         // Nice: 19th field
             &starttime);         // Start time: 22nd field
-    if (proc->isKernalThread)
-        strncpy(proc->command, comm, sizeof(proc->command));
+    strncpy(proc->command, comm, sizeof(proc->command));
     proc->time = (utime + stime) / sysconf(_SC_CLK_TCK);
     fclose(file);
 
