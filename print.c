@@ -24,8 +24,8 @@ void print_tree(Process *process, int level) {
 void print_list(Process **processes, int count) {
     for (int i = 0; i < count; i++) {
         if (processes[i]->isKernalThread == 1) continue;
-        printf("PID: %d, User: %s, Priority: %d, Nice: %d, State: %c, CPU Usage: %.2f%%, Mem Usage: %.2f%%, "
-               "Time: %lu, VIRT: %lu, RES: %lu, SHR: %lu, Command: %s\n",
+        printf(" %d, %s, %d, %d, %c, %.2f%%, %.2f%%, "
+               "%lu, %lu, %lu, %lu, %s\n",
                processes[i]->pid,              // PID
                processes[i]->user,             // User
                processes[i]->priority,         // Priority

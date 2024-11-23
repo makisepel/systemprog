@@ -1,13 +1,13 @@
 CC = gcc
 CFLAGS = -Wall -g
-OBJ = main.o proc_reader.o print.o sort.o control.o system_reader.o
+OBJ = main.o proc_reader.o print.o sort.o control.o system_reader.o terminal_ui.o
 
 all: systop
 
 systop: $(OBJ)
-	$(CC) $(CFLAGS) -o systop $(OBJ)
+	$(CC) $(CFLAGS) -o systop $(OBJ) -lncurses
 
-main.o: main.c process.h proc_reader.h print.h sort.h system_reader.h control.h
+main.o: main.c process.h proc_reader.h print.h sort.h system_reader.h control.h terminal_ui.h
 	$(CC) $(CFLAGS) -c main.c
 
 proc_reader.o: proc_reader.c proc_reader.h process.h
@@ -25,5 +25,8 @@ control.o: control.c control.h process.h
 system_reader.o: system_reader.c system_reader.h
 	$(CC) $(CFLAGS) -c system_reader.c
 
+terminal_ui.o: terminal_ui.c terminal_ui.h process.h
+	$(CC) $(CFLAGS) -c terminal_ui.c
+
 clean:
-	rm -f *.o systop
+	rm -f $(OBJ) systop

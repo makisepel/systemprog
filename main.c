@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "process.h"
+#include "terminal_ui.h"
 #include "proc_reader.h"
 #include "sort.h"
 #include "print.h"
@@ -54,7 +55,8 @@ int main() {
         sort_list(processes, process_count, compare_by_pid_asc);
 
         // list 출력
-        print_list(processes, process_count);
+        run_ui(processes, process_count);
+        // print_list(processes, process_count);
 
         // tree 정렬
         // for (int i = 0; i < MAX_PROCESSES; i++) {
