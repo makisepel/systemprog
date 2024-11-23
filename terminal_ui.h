@@ -2,6 +2,7 @@
 #define TERMINAL_UI_H
 
 #include "process.h"
+#include <ncurses.h>
 
 void print_upper(WINDOW *win);
 void print_info(WINDOW *win, int highlight, int num_info);
