@@ -187,7 +187,7 @@ void run_ui(Process *processes[], int process_count) {
                     else
                         ++highlight;
                 } else {
-                    if (selected_row < process_count - 1 && selected_row < process_height - 3) {
+                    if (selected_row < process_count - 1 && selected_row < process_height) {
                         selected_row++;
                     }
                 }
