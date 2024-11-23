@@ -6,8 +6,8 @@
 
 void print_upper(WINDOW *win);
 void print_info(WINDOW *win, int highlight, int num_info);
-void print_processes(WINDOW *win, Process *processes[], int count);
-void print_bottom(WINDOW *win, int highlight, int num_option, int term_height);
+void print_processes(WINDOW *win,int highlight, Process *processes[], int count);
+void print_bottom(WINDOW *win, int num_option);
 void run_ui(Process *processes[], int max_processes);
 
 #endif // TERMINAL_UI_H
