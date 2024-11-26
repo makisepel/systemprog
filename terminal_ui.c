@@ -201,7 +201,7 @@ void run_ui(Process *processes[], int process_count)
   noecho();
   cbreak();             // Line buffering disabled
   keypad(stdscr, TRUE); // Enable function keys
-  curs_set(0);          // Hide cursor
+    curs_set(0);          // Hide cursor
 
   // Get terminal dimensions
   int term_height, term_width;
@@ -232,7 +232,8 @@ void run_ui(Process *processes[], int process_count)
   print_processes(process_win, selected_row, processes, process_count, process_height);
   print_bottom(bottom_win, num_option);
 
-  if (current_window == INFO_WINDOW){
+  while(1){
+    if (current_window == INFO_WINDOW){
             c = wgetch(info_win);
         }
         else{
@@ -303,4 +304,6 @@ void run_ui(Process *processes[], int process_count)
         wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
         print_processes(process_win, selected_row, processes, process_count, process_height);
         print_bottom(bottom_win, num_option);
+
+  }
 }
