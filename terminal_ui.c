@@ -3,32 +3,20 @@
 #include <string.h>
 #include "process.h"
 #include "print.h"
+#include "sort.h"
 
+#define INFO_WINDOW 0
+#define PROCESS_WINDOW 1
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 char *info[] = {
-    "PID",
-    "USER",
-    "PRI",
-    "NI",
-    "VIRT",
-    "RES",
-    "S",
-    "CPU%",
-    "MEM%",
-    "TIME+",
-    "COMMAND",
+    "PID", "USER", "PRI", "NI", "VIRT", "RES", 
+    "S", "CPU%", "MEM%", "TIME+","COMMAND",
 };
 
 char *option[] = {
-    "F1 HELP ",
-    "F2 SETUP ",
-    "F3 Search ",
-    "F4 Tree ",
-    "F5 SortBy ",
-    "F6 NICE + ",
-    "F7 NICE - ",
-    "F8 KILL ",
+    "F1 HELP ", "F2 SETUP ", "F3 Search ", "F4 Tree ",
+    "F5 SortBy ", "F6 NICE + ", "F7 NICE - ", "F8 KILL ",
     "F9 QUIT ",
 };
 
@@ -85,7 +73,8 @@ void print_processes(WINDOW *win, int selected_row, Process *processes[], int pr
   int y = 0;
 
   int start_row = selected_row < height ? 0 : selected_row - height + 1;
-  for (int i = start_row; i < height && (start_row + i) < process_count; ++i)
+
+  for (int i = 0; i < height; i++)
   {
     int index = start_row + i;
     if (index >= process_count) break;
@@ -181,7 +170,7 @@ void run_ui(Process *processes[], int process_count)
   print_bottom(bottom_win, num_option);
 
     while (1) {
-        if (current_window == 0){
+        if (current_window == INFO_WINDOW){
             c = wgetch(info_win);
         }
         else{
@@ -190,23 +179,23 @@ void run_ui(Process *processes[], int process_count)
 
         switch (c){
         case KEY_UP:
-            if (current_window == 1){
+            if (current_window == PROCESS_WINDOW){
                 if(selected_row > 0) selected_row--;
             }
             break;
         case KEY_DOWN:
-            if (current_window == 1){
+            if (current_window == PROCESS_WINDOW){
                 if (selected_row < process_count - 1) selected_row++;
             }
             break;
         case KEY_LEFT:
-            if (current_window == 0){
+            if (current_window == INFO_WINDOW){
                 if (highlight == 1) highlight = num_info;
                 else --highlight;
             }
             break;
         case KEY_RIGHT:
-            if (current_window == 0){
+            if (current_window == INFO_WINDOW){
                 if (highlight == num_info) highlight = 1;
                 else ++highlight;
             }
