@@ -7,16 +7,33 @@
 
 #define INFO_WINDOW 0
 #define PROCESS_WINDOW 1
+#define ASCENDING 1
+#define DESCENDING -1
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 char *info[] = {
-    "PID", "USER", "PRI", "NI", "VIRT", "RES", 
-    "S", "CPU%", "MEM%", "TIME+","COMMAND",
+    "PID", 
+    "USER", 
+    "PRI", 
+    "NI", 
+    "VIRT", 
+    "RES", 
+    "S", 
+    "CPU%", 
+    "MEM%", 
+    "TIME+",
+    "COMMAND",
 };
 
 char *option[] = {
-    "F1 HELP ", "F2 SETUP ", "F3 Search ", "F4 Tree ",
-    "F5 SortBy ", "F6 NICE + ", "F7 NICE - ", "F8 KILL ",
+    "F1 HELP ", 
+    "F2 SETUP ", 
+    "F3 Search ", 
+    "F4 Tree ",
+    "F5 SortBy ", 
+    "F6 NICE + ", 
+    "F7 NICE - ", 
+    "F8 KILL ",
     "F9 QUIT ",
 };
 
@@ -28,6 +45,51 @@ int num_info = ARRAY_SIZE(info);
 int num_option = ARRAY_SIZE(option);
 int selected_row = 0;
 int current_window = 0; // 0 for info_win, 1 for process_win
+int (*comparator)(const void *, const void *);
+int sort_order = 1; // 1 for ascending, -1 for descending
+
+// choose comparator based on highlight and sort_order
+int (*choose_comparator(int highlight, int sort_order))(const void *, const void *)
+{
+    switch (highlight)
+    {
+    case 1:
+        return sort_order == ASCENDING ? compare_by_pid_asc : compare_by_pid_desc;
+        break;
+    case 2:
+        return sort_order == ASCENDING ? compare_by_user_asc : compare_by_user_desc;
+        break;
+    case 3: 
+        return sort_order == ASCENDING ? compare_by_priority_asc : compare_by_priority_desc;
+        break;
+    case 4:
+        return sort_order == ASCENDING ? compare_by_nice_asc : compare_by_nice_desc;
+        break;
+    case 5:
+        return sort_order == ASCENDING ? compare_by_virt_asc : compare_by_virt_desc;
+        break;
+    case 6:
+        return sort_order == ASCENDING ? compare_by_res_asc : compare_by_res_desc;
+        break;
+    case 7:
+        return sort_order == ASCENDING ? compare_by_state_asc : compare_by_state_desc;
+        break;
+    case 8:
+        return sort_order == ASCENDING ? compare_by_cpu_usage_asc : compare_by_cpu_usage_desc;
+        break;
+    case 9:
+        return sort_order == ASCENDING ? compare_by_mem_usage_asc : compare_by_mem_usage_desc;
+        break;
+    case 10:
+        return sort_order == ASCENDING ? compare_by_time_asc : compare_by_time_desc;
+        break;
+    case 11:
+        return sort_order == ASCENDING ? compare_by_command_asc : compare_by_command_desc;
+        break;
+    default:
+        break;
+    }   
+}
 
 void print_upper(WINDOW *win)
 {
@@ -139,6 +201,7 @@ void run_ui(Process *processes[], int process_count)
   noecho();
   cbreak();             // Line buffering disabled
   keypad(stdscr, TRUE); // Enable function keys
+  curs_set(0);          // Hide cursor
 
   // Get terminal dimensions
   int term_height, term_width;
@@ -203,7 +266,32 @@ void run_ui(Process *processes[], int process_count)
         case 9: // Tab key to switch windows
             current_window = (current_window + 1) % 2;
             break;
-        case KEY_F(9): // Enter key
+        case '\n': // Enter key
+        case KEY_ENTER:
+            if (current_window == INFO_WINDOW && highlight >= 1){
+                comparator = choose_comparator(highlight, sort_order);
+                sort_list(processes, process_count, comparator);
+                sort_order = -sort_order;
+                selected_row = 0;
+            }
+            break;
+        case KEY_F(1): // F1 for help
+            break;
+        case KEY_F(2): // F2 for setup
+            break;
+        case KEY_F(3): // F3 for search
+            break;
+        case KEY_F(4): // F4 for tree   
+            break;
+        case KEY_F(5): // F5 for sort by  
+            break;
+        case KEY_F(6): // F6 for nice +
+            break;
+        case KEY_F(7): // F7 for nice -
+            break;
+        case KEY_F(8): // F8 for kill
+            break;
+        case KEY_F(9): // F9 to quit
             endwin();
             exit(EXIT_SUCCESS);
             break;
