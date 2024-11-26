@@ -9,7 +9,7 @@
 char *info[] = {
     "PID",
     "USER",
-    "Exit",
+    "PRI",
     "NI",
     "VIRT",
     "RES",
@@ -78,42 +78,47 @@ void print_info(WINDOW *win, int highlight, int num_info)
   wrefresh(win); // Refresh to display changes
 }
 
-void print_processes(WINDOW *win, int selected_row, Process *processes[], int height)
+void print_processes(WINDOW *win, int selected_row, Process *processes[], int process_count, int height)
 {
   werase(win);
   int x = 0;
   int y = 0;
-  for (int i = 0; i < height; ++i)
+
+  int start_row = selected_row < height ? 0 : selected_row - height + 1;
+  for (int i = start_row; i < height && (start_row + i) < process_count; ++i)
   {
-    if (selected_row == i + 1)
+    int index = start_row + i;
+    if (index >= process_count) break;
+
+    if (selected_row == index)
     {
       wattron(win, A_REVERSE);
-      mvwprintw(win, y, x, "%d", processes[i]->pid);
-      mvwprintw(win, y, x + 5, "%s", processes[i]->user);
-      mvwprintw(win, y, x + 10, "%d", processes[i]->priority);
-      mvwprintw(win, y, x + 15, "%d", processes[i]->nice);
-      mvwprintw(win, y, x + 20, "%lu", processes[i]->virt);
-      mvwprintw(win, y, x + 25, "%lu", processes[i]->res);
-      mvwprintw(win, y, x + 30, "%c", processes[i]->state);
-      mvwprintw(win, y, x + 35, "%.2f", processes[i]->cpu_usage);
-      mvwprintw(win, y, x + 40, "%.2f", processes[i]->mem_usage);
-      mvwprintw(win, y, x + 45, "%lu", processes[i]->time);
-      mvwprintw(win, y, x + 50, "%s", processes[i]->command);
+      mvwprintw(win, y, x, "%d", processes[index]->pid);
+      mvwprintw(win, y, x + 5, "%s", processes[index]->user);
+      mvwprintw(win, y, x + 10, "%d", processes[index]->priority);
+      mvwprintw(win, y, x + 15, "%d", processes[index]->nice);
+      mvwprintw(win, y, x + 20, "%lu", processes[index]->virt);
+      mvwprintw(win, y, x + 25, "%lu", processes[index]->res);
+      mvwprintw(win, y, x + 30, "%c", processes[index]->state);
+      mvwprintw(win, y, x + 35, "%.2f", processes[index]->cpu_usage);
+      mvwprintw(win, y, x + 40, "%.2f", processes[index]->mem_usage);
+      mvwprintw(win, y, x + 45, "%lu", processes[index]->time);
+      mvwprintw(win, y, x + 50, "%s", processes[index]->command);
       wattroff(win, A_REVERSE);
     }
     else
     {
-      mvwprintw(win, y, x, "%d", processes[i]->pid);
-      mvwprintw(win, y, x + 5, "%s", processes[i]->user);
-      mvwprintw(win, y, x + 10, "%d", processes[i]->priority);
-      mvwprintw(win, y, x + 15, "%d", processes[i]->nice);
-      mvwprintw(win, y, x + 20, "%lu", processes[i]->virt);
-      mvwprintw(win, y, x + 25, "%lu", processes[i]->res);
-      mvwprintw(win, y, x + 30, "%c", processes[i]->state);
-      mvwprintw(win, y, x + 35, "%.2f", processes[i]->cpu_usage);
-      mvwprintw(win, y, x + 40, "%.2f", processes[i]->mem_usage);
-      mvwprintw(win, y, x + 45, "%lu", processes[i]->time);
-      mvwprintw(win, y, x + 50, "%s", processes[i]->command);
+      mvwprintw(win, y, x, "%d", processes[index]->pid);
+      mvwprintw(win, y, x + 5, "%s", processes[index]->user);
+      mvwprintw(win, y, x + 10, "%d", processes[index]->priority);
+      mvwprintw(win, y, x + 15, "%d", processes[index]->nice);
+      mvwprintw(win, y, x + 20, "%lu", processes[index]->virt);
+      mvwprintw(win, y, x + 25, "%lu", processes[index]->res);
+      mvwprintw(win, y, x + 30, "%c", processes[index]->state);
+      mvwprintw(win, y, x + 35, "%.2f", processes[index]->cpu_usage);
+      mvwprintw(win, y, x + 40, "%.2f", processes[index]->mem_usage);
+      mvwprintw(win, y, x + 45, "%lu", processes[index]->time);
+      mvwprintw(win, y, x + 50, "%s", processes[index]->command);
     }
     y++;
   }
@@ -163,6 +168,7 @@ void run_ui(Process *processes[], int process_count)
   bottom_win = newwin(bottom_height, term_width, upper_height + info_height + process_height, 0);
 
   // Enable keypad
+  keypad(stdscr, TRUE);
   keypad(info_win, TRUE);
   keypad(process_win, TRUE);
 
@@ -171,83 +177,56 @@ void run_ui(Process *processes[], int process_count)
   wattron(info_win, COLOR_PAIR(1)); // Turn on color pair 1
   print_info(info_win, highlight, num_info);
   wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
-  print_processes(process_win, selected_row, processes, process_height);
+  print_processes(process_win, selected_row, processes, process_count, process_height);
   print_bottom(bottom_win, num_option);
 
-  if (current_window == 0)
-  {
-    c = wgetch(info_win);
-  }
-  else
-  {
-    c = wgetch(process_win);
-  }
+    while (1) {
+        if (current_window == 0){
+            c = wgetch(info_win);
+        }
+        else{
+            c = wgetch(process_win);
+        }
 
-  switch (c)
-  {
-  case KEY_UP:
-    if (current_window != 0)
-    {
-      if (highlight == 1)
-        highlight = num_info;
-      else
-        --highlight;
+        switch (c){
+        case KEY_UP:
+            if (current_window == 1){
+                if(selected_row > 0) selected_row--;
+            }
+            break;
+        case KEY_DOWN:
+            if (current_window == 1){
+                if (selected_row < process_count - 1) selected_row++;
+            }
+            break;
+        case KEY_LEFT:
+            if (current_window == 0){
+                if (highlight == 1) highlight = num_info;
+                else --highlight;
+            }
+            break;
+        case KEY_RIGHT:
+            if (current_window == 0){
+                if (highlight == num_info) highlight = 1;
+                else ++highlight;
+            }
+            break;
+        case 9: // Tab key to switch windows
+            current_window = (current_window + 1) % 2;
+            break;
+        case KEY_F(9): // Enter key
+            endwin();
+            exit(EXIT_SUCCESS);
+            break;
+        default:
+            break;
+        }
+        
+        wattron(info_win, COLOR_PAIR(1)); // Turn on color pair 1
+        print_info(info_win, highlight, num_info);
+        wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
+        print_processes(process_win, selected_row, processes, process_count, process_height);
+        print_bottom(bottom_win, num_option);
     }
-    else
-    {
-      if (selected_row > 0)
-      {
-        selected_row--;
-      }
-    }
-    break;
-  case KEY_DOWN:
-    if (current_window != 0)
-    {
-      if (highlight == num_info)
-        highlight = 1;
-      else
-        ++highlight;
-    }
-    else
-    {
-      if (selected_row < process_count - 1 && selected_row < process_height)
-      {
-        selected_row++;
-      }
-    }
-    break;
-  case KEY_LEFT:
-    if (current_window == 0)
-    {
-      if (highlight == 1)
-        highlight = num_info;
-      else
-        --highlight;
-    }
-    break;
-  case KEY_RIGHT:
-    if (current_window == 0)
-    {
-      if (highlight == num_info)
-        highlight = 1;
-      else
-        ++highlight;
-    }
-    break;
-  case 9: // Tab key to switch windows
-    current_window = (current_window + 1) % 2;
-    break;
-  case KEY_F(9): // Enter key
-    endwin();
-    exit(EXIT_SUCCESS);
-    break;
-  default:
-    break;
-  }
-  wattron(info_win, COLOR_PAIR(1)); // Turn on color pair 1
-  print_info(info_win, highlight, num_info);
-  wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
-  print_processes(process_win, selected_row, processes, process_height);
-  print_bottom(bottom_win, num_option);
+
 }
