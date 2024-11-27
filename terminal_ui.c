@@ -293,36 +293,40 @@ void run_ui(Process *processes[])
   switch (c)
   {
   case KEY_UP:
-    if (current_window == PROCESS_WINDOW)
-    {
-      if (selected_row > 0)
-        selected_row--;
-    }
+    if (current_window == INFO_WINDOW)
+      current_window = PROCESS_WINDOW;
+
+    if (selected_row > 0)
+      selected_row--;
+
     break;
   case KEY_DOWN:
-    if (current_window == PROCESS_WINDOW)
-    {
-      if (selected_row < process_count - 1)
-        selected_row++;
-    }
+    if (current_window == INFO_WINDOW)
+      current_window = PROCESS_WINDOW;
+
+    if (selected_row < process_count - 1)
+      selected_row++;
+
     break;
   case KEY_LEFT:
-    if (current_window == INFO_WINDOW)
-    {
-      if (highlight == 1)
-        highlight = num_info;
-      else
-        --highlight;
-    }
+    if (current_window == PROCESS_WINDOW)
+      current_window = INFO_WINDOW;
+
+    if (highlight == 1)
+      highlight = num_info;
+    else
+      --highlight;
+
     break;
   case KEY_RIGHT:
-    if (current_window == INFO_WINDOW)
-    {
-      if (highlight == num_info)
-        highlight = 1;
-      else
-        ++highlight;
-    }
+    if (current_window == PROCESS_WINDOW)
+      current_window = INFO_WINDOW;
+
+    if (highlight == num_info)
+      highlight = 1;
+    else
+      ++highlight;
+
     break;
   case 9: // Tab key to switch windows
     current_window = (current_window + 1) % 2;
