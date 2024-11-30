@@ -84,6 +84,7 @@ void link_userthread(Process *proc, Process **processes, int *cnt, unsigned long
           child_thread->mem_usage = ((float)child_thread->res / (total_ram / 1024)) * 100.0;
           child_thread->cpu_usage = ((float)child_thread->time / total_cpu_time) * 100.0;
           add_child(proc, child_thread);
+          child_thread->parent = proc;
         }
         else
         {
@@ -267,6 +268,7 @@ int get_all_processes(Process **processes, int max_count)
       // 프로세스 초기화
       processes[proc_count]->children = NULL;
       processes[proc_count]->child_count = 0;
+      processes[proc_count]->parent = NULL; // Add parent pointer initialization
 
       processes[proc_count]->pid = atoi(entry->d_name);
       if (read_process_info(processes[proc_count]) == 0)
@@ -286,6 +288,8 @@ int get_all_processes(Process **processes, int max_count)
               return -1;
             }
             processes[i]->children[processes[i]->child_count++] = processes[proc_count];
+            processes[proc_count]->parent = processes[i];
+
             break;
           }
         }
