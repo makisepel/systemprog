@@ -211,7 +211,7 @@ void print_processes(WINDOW *win, int selected_row, Process *processes[], int pr
   }
   wrefresh(win);
 }
-void print_processes_tree(WINDOW *win, Process *process, int level, int *row, int max_rows, Process **selected_processes, int *count, int last_check)
+void print_processes_tree(WINDOW *win, Process *process, int level, int *row, int max_rows, int last_check)
 {
   // 현재 출력 가능한 행 범위 계산
   int start_row = selected_row < max_rows ? 0 : selected_row - max_rows + 1;
@@ -219,10 +219,9 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   /*
    =====================================================================================================================
 
+
    =====================================================================================================================
   */
-  selected_processes[*count] = process;
-  (*count)++;
   if (process->parent && last_check == 1)
   {
     level_blank[level - 1] = 1;
@@ -239,11 +238,11 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
     {
       if (process->child_count - 1 == i)
       {
-        print_processes_tree(win, process->children[i], level + 1, row, max_rows, selected_processes, count, 1);
+        print_processes_tree(win, process->children[i], level + 1, row, max_rows, 1);
       }
       else
       {
-        print_processes_tree(win, process->children[i], level + 1, row, max_rows, selected_processes, count, 0);
+        print_processes_tree(win, process->children[i], level + 1, row, max_rows, 0);
       }
     }
 
@@ -257,6 +256,7 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   /*
    =====================================================================================================================
 
+
    =====================================================================================================================
    */
   // 현재 프로세스를 출력 데이터에 저장
@@ -264,7 +264,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   // X좌표와 들여쓰기 처리
   int x = 0;              // 출력 시작 열
   int indent = level * 4; // 들여쓰기 공백 (트리 깊이에 따라 증가)
-
   if (*row == selected_row)
   {
     if (kill_check == KILL_TRUE)
@@ -274,10 +273,10 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
       kill_check = KILL_FALSE;
     }
   }
-
   // 선택된 행 강조
   if (*row == selected_row)
   {
+
     wattron(win, A_REVERSE);                               // 반전 효과
     mvwhline(win, *row - start_row, x, ' ', getmaxx(win)); // 선택된 행을 전부 반전 처리
   }
@@ -285,11 +284,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   // 현재 프로세스 정보 출력
 
   mvwprintw(win, *row - start_row, x, "%d", process->pid);
-  // if (process->parent != NULL)
-  // {
-  //   mvwprintw(win, *row - start_row, x + 6, "%d", process->parent->pid);
-  //   mvwprintw(win, *row - start_row, x + 13, "%d", process->parent->child_count);
-  // }
   mvwprintw(win, *row - start_row, x + 6, "%.5s", process->user);              // 사용자 이름 출력
   mvwprintw(win, *row - start_row, x + 13, "%d", process->priority);           // 우선순위 출력
   mvwprintw(win, *row - start_row, x + 19, "%d", process->nice);               // NICE 값 출력
@@ -340,17 +334,17 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   {
     if (process->child_count - 1 == i)
     {
-      print_processes_tree(win, process->children[i], level + 1, row, max_rows, selected_processes, count, 1);
+      print_processes_tree(win, process->children[i], level + 1, row, max_rows, 1);
     }
     else
     {
-      print_processes_tree(win, process->children[i], level + 1, row, max_rows, selected_processes, count, 0);
+      print_processes_tree(win, process->children[i], level + 1, row, max_rows, 0);
     }
   }
 
   // 창 갱신
   wrefresh(win);
-  level_blank[level - 1] = 0;
+  // level_blank[level - 1] = 0;
 }
 
 void print_bottom(WINDOW *win, int num_option)
@@ -393,8 +387,6 @@ void run_ui(Process *processes[])
       processes[i] = NULL;
     }
   }
-  Process *selected_processes[MAX_PROCESSES] = {NULL}; // 출력된 프로세스를 저장
-  int process_count2 = 0;                              // 출력된 프로세스 수
 
   // 프로세스 리소스 읽어오는 함수
   read_resource(
@@ -440,7 +432,7 @@ void run_ui(Process *processes[])
   */
   memset(level_blank, 0, sizeof(level_blank));
   int row = 0; // 시작 행
-  print_processes_tree(process_win, processes[0], 0, &row, process_height, selected_processes, &process_count2, 0);
+  print_processes_tree(process_win, processes[0], 0, &row, process_height, 0);
 
   /*
   --------------------------------------------------------------------------------------------------
