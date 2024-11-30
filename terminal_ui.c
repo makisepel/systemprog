@@ -215,7 +215,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   /*
    =====================================================================================================================
 
-
    =====================================================================================================================
   */
   selected_processes[*count] = process;
@@ -254,7 +253,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   /*
    =====================================================================================================================
 
-
    =====================================================================================================================
    */
   // 현재 프로세스를 출력 데이터에 저장
@@ -275,8 +273,8 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   mvwprintw(win, *row - start_row, x, "%d", process->pid);
   // if (process->parent != NULL)
   // {
-  //   mvwprintw(win, *row - start_row, x + 6, "%d", process->parent->pid);          // PID 출력
-  //   mvwprintw(win, *row - start_row, x + 13, "%d", process->parent->child_count); // PID 출력
+  //   mvwprintw(win, *row - start_row, x + 6, "%d", process->parent->pid);          
+  //   mvwprintw(win, *row - start_row, x + 13, "%d", process->parent->child_count);  
   // }
   mvwprintw(win, *row - start_row, x + 6, "%.5s", process->user);              // 사용자 이름 출력
   mvwprintw(win, *row - start_row, x + 13, "%d", process->priority);           // 우선순위 출력
