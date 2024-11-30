@@ -426,9 +426,7 @@ void run_ui(Process *processes[])
   */
   memset(level_blank, 0, sizeof(level_blank));
   int row = 0; // 시작 행
-  werase(process_win);
   print_processes_tree(process_win, processes[0], 0, &row, process_height, selected_processes, &process_count2, 0);
-  wrefresh(process_win);
 
   /*
   --------------------------------------------------------------------------------------------------
