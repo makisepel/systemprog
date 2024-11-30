@@ -23,6 +23,7 @@ struct Process {
     Process **children;     // 자식노드
     int child_count;        // 자식노드 갯수
     int isKernalThread;
+    Process *parent;
 
 };
 
