@@ -8,6 +8,7 @@
 #include "sort.h"
 #include "proc_reader.h"
 #include "system_reader.h"
+#include "control.h"
 
 #define INFO_WINDOW 0
 #define PROCESS_WINDOW 1
@@ -15,6 +16,8 @@
 #define DESCENDING -1
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define MAX_PROCESSES 1024
+#define KILL_TRUE 1
+#define KILL_FALSE 0
 
 // process들을 받는 배열
 Process *processes;
@@ -22,6 +25,7 @@ unsigned long mem_used, mem_total, swap_used, swap_total;
 float load_by_1min, load_by_5min, load_by_15min;
 double uptime;
 int level_blank[128];
+int kill_check = KILL_FALSE;
 char *info[] = {
     "PID",
     "USER",
@@ -261,6 +265,16 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   int x = 0;              // 출력 시작 열
   int indent = level * 4; // 들여쓰기 공백 (트리 깊이에 따라 증가)
 
+  if (*row == selected_row)
+  {
+    if (kill_check == KILL_TRUE)
+    {
+      selected_row++;
+      kill_process(process->pid);
+      kill_check = KILL_FALSE;
+    }
+  }
+
   // 선택된 행 강조
   if (*row == selected_row)
   {
@@ -273,8 +287,8 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   mvwprintw(win, *row - start_row, x, "%d", process->pid);
   // if (process->parent != NULL)
   // {
-  //   mvwprintw(win, *row - start_row, x + 6, "%d", process->parent->pid);          
-  //   mvwprintw(win, *row - start_row, x + 13, "%d", process->parent->child_count);  
+  //   mvwprintw(win, *row - start_row, x + 6, "%d", process->parent->pid);
+  //   mvwprintw(win, *row - start_row, x + 13, "%d", process->parent->child_count);
   // }
   mvwprintw(win, *row - start_row, x + 6, "%.5s", process->user);              // 사용자 이름 출력
   mvwprintw(win, *row - start_row, x + 13, "%d", process->priority);           // 우선순위 출력
@@ -508,7 +522,7 @@ void run_ui(Process *processes[])
     break;
   case KEY_F(3): // F3 for search
     break;
-  case KEY_F(4): // F4 for tree
+  case KEY_F(4): // F4 for change print mode
     break;
   case KEY_F(5): // F5 for sort by
     break;
@@ -517,6 +531,7 @@ void run_ui(Process *processes[])
   case KEY_F(7): // F7 for nice -
     break;
   case KEY_F(8): // F8 for kill
+    kill_check = KILL_TRUE;
     break;
   case KEY_F(9): // F9 to quit
     endwin();
