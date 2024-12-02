@@ -1,6 +1,7 @@
 // terminal_ui.c
 #include <locale.h>
 #include <ncurses.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include "process.h"
