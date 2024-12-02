@@ -5,7 +5,7 @@
 
 #include "process.h"
 #include <ncurses.h>
-
+char *formatSize(unsigned long int size);
 int *choose_comparator(int highlight, int sort_order);
 void print_upper(WINDOW *win);
 void print_second_upper(WINDOW *win);

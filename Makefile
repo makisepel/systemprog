@@ -5,7 +5,7 @@ OBJ = main.o proc_reader.o print.o sort.o control.o system_reader.o terminal_ui.
 all: systop
 
 systop: $(OBJ)
-	$(CC) $(CFLAGS) -o systop $(OBJ) -lncurses
+	$(CC) $(CFLAGS) -o systop $(OBJ) -lncursesw
 
 main.o: main.c process.h proc_reader.h print.h sort.h system_reader.h control.h terminal_ui.h
 	$(CC) $(CFLAGS) -c main.c
