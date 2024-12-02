@@ -6,7 +6,6 @@
 #include "process.h"
 #include <ncurses.h>
 char *formatSize(unsigned long int size);
-char *formatTime(double seconds);
 int *choose_comparator(int highlight, int sort_order);
 void print_upper(WINDOW *win);
 void print_system(WINDOW *win);
