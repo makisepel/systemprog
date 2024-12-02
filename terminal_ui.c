@@ -51,7 +51,7 @@ char *option[] = {
 
 WINDOW *upper_win, *info_win, *process_win, *bottom_win;
 int highlight = 1;
-int printby = 0;
+int printby = -1; // -1 for list, 1 for tree
 int c;
 int num_info = ARRAY_SIZE(info);
 int num_option = ARRAY_SIZE(option);
@@ -60,6 +60,7 @@ int current_window = 0; // 0 for info_win, 1 for process_win
 int (*comparator)(const void *, const void *) = compare_by_pid_asc;
 int sort_order = 1; // 1 for ascending, -1 for descending
 int term_height, term_width;
+int kill_check = KILL_FALSE;
 
 // Calculate window heights
 int upper_height = 7;
@@ -141,7 +142,10 @@ void print_processes_list(WINDOW *win, int selected_row, Process *processes[], i
     int index = start_row + i;
     if (index >= process_count) break;
 
-    if (selected_row == index) wattron(win, A_REVERSE); // 반전 적용
+    if (selected_row == index) { 
+      wattron(win, A_REVERSE); // 반전 적용
+      mvwhline(win, index - start_row, x, ' ', getmaxx(win));
+    }
 
     mvwprintw(win, y, x, "%d", processes[index]->pid);
     mvwprintw(win, y, x + 6, "%s", processes[index]->user);
@@ -193,6 +197,15 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   // X좌표와 들여쓰기 처리
   int x = 0;              // 출력 시작 열
   int indent = level * 4; // 들여쓰기 공백 (트리 깊이에 따라 증가)
+
+  // KILL 수행
+  if (*row == selected_row) {
+    if (kill_check == KILL_TRUE) {
+      selected_row++;
+      kill_process(process->pid);
+      kill_check = KILL_FALSE;
+    }
+  }
 
   // 선택된 행 강조
   if (*row == selected_row) {
@@ -256,18 +269,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   level_blank[level - 1] = 0;
 }
 
-void print_bottom(WINDOW *win, int num_option) {
-  werase(win);
-  int x, y;
-  x = 0;
-  y = 0;
-  for (int i = 0; i < num_option; ++i) {
-    mvwprintw(win, y, x, "%s", option[i]);
-    x += strlen(info[i]) + 10; // Add padding between info columns
-  }
-  wrefresh(win); // Refresh to display changes
-}
-
 void initialize_ncurses_mode() {
   setlocale(LC_ALL, ""); // 시스템 로케일 활성화
 
@@ -312,7 +313,6 @@ void run_ui(Process *processes[]) {
   upper_win = newwin(upper_height, term_width, 0, 0);
   info_win = newwin(info_height, term_width, upper_height, 0);
   process_win = newwin(process_height, term_width, upper_height + info_height, 0);
-  bottom_win = newwin(bottom_height, term_width, upper_height + info_height + process_height, 0);
 
   // Enable keypad
   keypad(stdscr, TRUE);
@@ -326,7 +326,7 @@ void run_ui(Process *processes[]) {
   wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
 
   // 프로세스 정보 출력
-  if (printby == 0) {
+  if (printby == -1) {
     sort_list(processes, process_count, comparator);
     print_processes_list(process_win, selected_row, processes, process_count, process_height);
   }
@@ -338,8 +338,6 @@ void run_ui(Process *processes[]) {
     sort_tree(processes[0], comparator);
     print_processes_tree(process_win, processes[0], 0, &row, process_height, selected_processes, &process_count2, 0);
   }
-
-  print_bottom(bottom_win, num_option); // function 메뉴 출력
 
   wtimeout(info_win, 500);
   wtimeout(process_win, 500);
@@ -397,25 +395,25 @@ void run_ui(Process *processes[]) {
       }
       break;
 
-    case KEY_F(1): // F1 for change list
-      printby &= 0;
+    case KEY_F(1): // F1 for change print method
+      printby = -printby;
       break;
-    case KEY_F(2): // F2 for change tree
-      printby |= 1;
-      break;
-    case KEY_F(3): // F3 for nice +
+    case KEY_F(2): // F2 for nice +
       increase_nice(processes[selected_row]->pid);
       break;
-    case KEY_F(4): // F4 for nice -
+    case KEY_F(3): // F3 for nice -
       decrease_nice(processes[selected_row]->pid);
       break;
-    case KEY_F(5): // F5 for search
+    case KEY_F(4): // F4 for search
       // TODO: Search함수 구현
       break;
-    case KEY_F(6): // F6 for kill
-      kill_process(processes[selected_row]->pid);
+    case KEY_F(5): // F5 for kill
+      if (printby == -1)
+        kill_process(processes[selected_row]->pid);
+      else if (printby == 1)
+        kill_check = KILL_TRUE;
       break;
-    case KEY_F(7): // F7 to quit
+    case KEY_F(6): // F6 to quit
       endwin();
       exit(EXIT_SUCCESS);
       break;
