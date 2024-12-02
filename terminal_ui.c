@@ -26,6 +26,7 @@ float load_by_1min, load_by_5min, load_by_15min;
 double uptime;
 int level_blank[128];
 int kill_check = KILL_FALSE;
+
 char *info[] = {
     "PID",
     "USER",
@@ -40,21 +41,12 @@ char *info[] = {
     "COMMAND",
 };
 
-char *option[] = {
-    "F1 Search ",
-    "| F2 Tree  ",
-    "| F3 NICE +",
-    "| F4 NICE -",
-    "| F5 KILL  ",
-    "| F6 QUIT  ",
-};
 
-WINDOW *upper_win, *second_upper_win, *info_win, *process_win, *bottom_win;
+WINDOW *upper_win, *system_win, *info_win, *process_win;
 int highlight = 1;
 int choice = 0;
 int c;
 int num_info = ARRAY_SIZE(info);
-int num_option = ARRAY_SIZE(option);
 int selected_row = 0;
 int current_window = 0; // 0 for info_win, 1 for process_win
 int (*comparator)(const void *, const void *) = compare_by_pid_asc;
@@ -62,10 +54,9 @@ int sort_order = 1; // 1 for ascending, -1 for descending
 int term_height, term_width;
 
 // Calculate window heights
-int upper_height = 4;
-int second_upper_height = 5;
+int upper_height = 5;
+int system_info_height = 5;
 int info_height = 1;
-int bottom_height = 1;
 char *formatSize(unsigned long int size)
 {
   static char buffer[20];
@@ -132,10 +123,11 @@ void print_upper(WINDOW *win)
 
   mvwprintw(win, y, x, "WELCOME TO TASK MANAGER!");
   mvwprintw(win, y + 1, x, "IF YOU WANT TO SORT, PLEASE ENTER AT GREEN ROW.");
+  mvwprintw(win, y + 2, x, "F1: Search, F2: Tree, F3: NICE +, F4: NICE -, F5: KILL, F6: QUIT");
   wrefresh(win); // Refresh to display changes
 }
 
-void print_second_upper(WINDOW *win)
+void print_system(WINDOW *win)
 {
   box(win, 0, 0);
   int x = 1; // X-coordinate padding
@@ -156,7 +148,12 @@ void print_info(WINDOW *win, int highlight, int num_info)
 {
   int x = 0; // X-coordinate padding
   int y = 0; // Y-coordinate padding
-  // box(win, 0, 0);
+
+  wattron(win, COLOR_PAIR(1) | A_BOLD);
+  mvwhline(win, y, x, ' ', getmaxx(win)); // Draw horizontal line
+  wattroff(win, COLOR_PAIR(1) | A_BOLD);
+
+  wattron(win, COLOR_PAIR(1) | A_BOLD);
   for (int i = 0; i < num_info; ++i)
   {
     if (highlight == i + 1)
@@ -167,10 +164,11 @@ void print_info(WINDOW *win, int highlight, int num_info)
     }
     else
     {
-      mvwprintw(win, y, x, "%s", info[i]);
+      mvwprintw(win, y, x, "%s   ", info[i]);
     }
     x += strlen(info[i]) + 3; // Add padding between menu items
   }
+  wattroff(win, COLOR_PAIR(1) | A_BOLD);
   wrefresh(win); // Refresh to display changes
 }
 
@@ -192,31 +190,31 @@ void print_processes(WINDOW *win, int selected_row, Process *processes[], int pr
     {
       wattron(win, A_REVERSE);
       mvwprintw(win, y, x, "%d", processes[index]->pid);
-      mvwprintw(win, y, x + 6, "%s", processes[index]->user);
+      mvwprintw(win, y, x + 6, "%.5s", processes[index]->user);
       mvwprintw(win, y, x + 13, "%d", processes[index]->priority);
       mvwprintw(win, y, x + 19, "%d", processes[index]->nice);
-      mvwprintw(win, y, x + 24, "%lu", processes[index]->virt);
-      mvwprintw(win, y, x + 31, "%lu", processes[index]->res);
+      mvwprintw(win, y, x + 24, "%.6lu", processes[index]->virt);
+      mvwprintw(win, y, x + 31, "%.6lu", processes[index]->res);
       mvwprintw(win, y, x + 37, "%c", processes[index]->state);
       mvwprintw(win, y, x + 41, "%.2f", processes[index]->cpu_usage);
       mvwprintw(win, y, x + 48, "%.2f", processes[index]->mem_usage);
       mvwprintw(win, y, x + 55, "%lu", processes[index]->time);
-      mvwprintw(win, y, x + 63, "%s", processes[index]->command);
+      mvwprintw(win, y, x + 63, "%-20s", processes[index]->command);
       wattroff(win, A_REVERSE);
     }
     else
     {
       mvwprintw(win, y, x, "%d", processes[index]->pid);
-      mvwprintw(win, y, x + 6, "%s", processes[index]->user);
+      mvwprintw(win, y, x + 6, "%.5s", processes[index]->user);
       mvwprintw(win, y, x + 13, "%d", processes[index]->priority);
       mvwprintw(win, y, x + 19, "%d", processes[index]->nice);
-      mvwprintw(win, y, x + 24, "%lu", processes[index]->virt);
-      mvwprintw(win, y, x + 31, "%lu", processes[index]->res);
+      mvwprintw(win, y, x + 24, "%.6lu", processes[index]->virt);
+      mvwprintw(win, y, x + 31, "%.6lu", processes[index]->res);
       mvwprintw(win, y, x + 37, "%c", processes[index]->state);
       mvwprintw(win, y, x + 41, "%.2f", processes[index]->cpu_usage);
       mvwprintw(win, y, x + 48, "%.2f", processes[index]->mem_usage);
       mvwprintw(win, y, x + 55, "%lu", processes[index]->time);
-      mvwprintw(win, y, x + 63, "%s", processes[index]->command);
+      mvwprintw(win, y, x + 63, "%-20s", processes[index]->command);
     }
     y++;
   }
@@ -289,7 +287,7 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   // 선택된 행 강조
   if (*row == selected_row)
   {
-    wattron(win, A_REVERSE);                               // 반전 효과
+    wattron(win, A_REVERSE | A_BOLD);                               // 반전 효과
     mvwhline(win, *row - start_row, x, ' ', getmaxx(win)); // 선택된 행을 전부 반전 처리
   }
 
@@ -340,7 +338,7 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
 
   if (*row == selected_row)
   {
-    wattroff(win, A_REVERSE); // 반전 효과 해제
+    wattroff(win, A_REVERSE | A_BOLD); // 반전 효과 해제
   }
 
   // 현재 행 증가
@@ -364,20 +362,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   level_blank[level - 1] = 0;
 }
 
-void print_bottom(WINDOW *win, int num_option)
-{
-  werase(win);
-  int x, y;
-  x = 0;
-  y = 0;
-  for (int i = 0; i < num_option; ++i)
-  {
-    mvwprintw(win, y, x, "%s", option[i]);
-    x += strlen(info[i]) + 10; // Add padding between info columns
-  }
-  wrefresh(win); // Refresh to display changes
-}
-
 void initialize_ncurses_mode()
 {
   setlocale(LC_ALL, ""); // 시스템 로케일 활성화
@@ -385,7 +369,7 @@ void initialize_ncurses_mode()
   // Initialize ncurses mode
   initscr();
   start_color();                          // Start color functionality
-  init_pair(1, COLOR_GREEN, COLOR_BLACK); // Initialize color pair 1 with green text on black background
+  init_pair(1, COLOR_BLACK, COLOR_GREEN); // Initialize color pair 1 with green text on black background
   clear();
   noecho();
   cbreak();             // Line buffering disabled
@@ -424,14 +408,13 @@ void run_ui(Process *processes[])
 
   getmaxyx(stdscr, term_height, term_width);
 
-  int process_height = term_height - (upper_height + second_upper_height + info_height + bottom_height);
+  int process_height = term_height - (upper_height + system_info_height + info_height);
 
   // Create windows
   upper_win = newwin(upper_height, term_width, 0, 0);
-  second_upper_win = newwin(second_upper_height, term_width, upper_height, 0);
-  info_win = newwin(info_height, term_width, upper_height + second_upper_height, 0);
-  process_win = newwin(process_height, term_width, upper_height + second_upper_height + info_height, 0);
-  bottom_win = newwin(bottom_height, term_width, upper_height + second_upper_height + info_height + process_height, 0);
+  system_win = newwin(system_info_height, term_width, upper_height, 0);
+  info_win = newwin(info_height, term_width, upper_height + system_info_height, 0);
+  process_win = newwin(process_height, term_width, upper_height + system_info_height + info_height, 0);
 
   // Enable keypad
   keypad(stdscr, TRUE);
@@ -442,10 +425,10 @@ void run_ui(Process *processes[])
   // sort_list(processes, process_count, comparator);
   sort_tree(processes[0], comparator);
   print_upper(upper_win);
-  print_second_upper(second_upper_win);
-  wattron(info_win, COLOR_PAIR(1)); // Turn on color pair 1
+  print_system(system_win);
+  // wattron(info_win, COLOR_PAIR(1) | A_BOLD); // Turn on color pair 1 and bold
   print_info(info_win, highlight, num_info);
-  wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
+  // wattroff(info_win, COLOR_PAIR(1) | A_BOLD); // Turn off color pair 1 and bold
   // print_processes(process_win, selected_row, processes, process_count, process_height);
   /*
   --------------------------------------------------------------------------------------------------
@@ -458,8 +441,6 @@ void run_ui(Process *processes[])
   /*
   --------------------------------------------------------------------------------------------------
   */
-
-  print_bottom(bottom_win, num_option);
 
   wtimeout(info_win, 500);
   wtimeout(process_win, 500);
@@ -484,10 +465,9 @@ void run_ui(Process *processes[])
   case KEY_UP:
     if (current_window == INFO_WINDOW)
       current_window = PROCESS_WINDOW;
-
+      
     if (selected_row > 0)
       selected_row--;
-
     break;
   case KEY_DOWN:
     if (current_window == INFO_WINDOW)
