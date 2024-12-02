@@ -148,17 +148,19 @@ void print_upper(WINDOW *win)
   wrefresh(win); // Refresh to display changes
 }
 
-
 void print_system(WINDOW *win)
 {
   box(win, 0, 0);
   int x = 1; // X-coordinate padding
   int y = 1; // Y-coordinate padding
   init_pair(6, COLOR_RED, COLOR_BLACK);
+  init_pair(7, COLOR_BLUE, COLOR_BLACK);
 
-  wattron(win, COLOR_PAIR(6));
+  wattron(win, COLOR_PAIR(6) | A_BOLD);
   mvwprintw(win, y, x, "SYSTEM INFORMATION");
-  wattroff(win, COLOR_PAIR(6));
+  wattroff(win, COLOR_PAIR(6) | A_BOLD);
+
+  wattron(win, COLOR_PAIR(7) | A_BOLD);
 
   mvwprintw(win, y + 1, x, "mem_used: %s", formatSize(mem_used));
   mvwprintw(win, y + 1, x + 16, ",mem_total: %s", formatSize(mem_total));
@@ -166,9 +168,11 @@ void print_system(WINDOW *win)
   mvwprintw(win, y + 1, x + 34, ",swap_used: %s", formatSize(swap_used));
 
   mvwprintw(win, y + 1, x + 52, ",swap_total: %s", formatSize(swap_total));
+
   mvwprintw(win, y + 2, x,
             "Load average: %.2f, %.2f, %.2f, Uptime: %s",
             load_by_1min, load_by_5min, load_by_15min, formatTime(uptime));
+  wattroff(win, COLOR_PAIR(7) | A_BOLD);
 
   wrefresh(win); // 창 갱신
 }
@@ -225,17 +229,17 @@ void print_processes_list(WINDOW *win, int selected_row, Process *processes[], i
       mvwhline(win, index - start_row, x, ' ', getmaxx(win));
     }
 
-      mvwprintw(win, y, x, "%d", processes[index]->pid);
-      mvwprintw(win, y, x + 6, "%.11s", processes[index]->user);
-      mvwprintw(win, y, x + 18, "%d", processes[index]->priority);
-      mvwprintw(win, y, x + 24, "%d", processes[index]->nice);
-      mvwprintw(win, y, x + 29, "%.6s", formatSize(processes[index]->virt));
-      mvwprintw(win, y, x + 36, "%.6s", formatSize(processes[index]->res));
-      mvwprintw(win, y, x + 43, "%c", processes[index]->state);
-      mvwprintw(win, y, x + 46, "%.2f", processes[index]->cpu_usage);
-      mvwprintw(win, y, x + 53, "%.2f", processes[index]->mem_usage);
-      mvwprintw(win, y, x + 60, "%.6s", formatTime(processes[index]->time));
-      mvwprintw(win, y, x + 68, "%-20s", processes[index]->command);
+    mvwprintw(win, y, x, "%d", processes[index]->pid);
+    mvwprintw(win, y, x + 6, "%.11s", processes[index]->user);
+    mvwprintw(win, y, x + 18, "%d", processes[index]->priority);
+    mvwprintw(win, y, x + 24, "%d", processes[index]->nice);
+    mvwprintw(win, y, x + 29, "%.6s", formatSize(processes[index]->virt));
+    mvwprintw(win, y, x + 36, "%.6s", formatSize(processes[index]->res));
+    mvwprintw(win, y, x + 43, "%c", processes[index]->state);
+    mvwprintw(win, y, x + 46, "%.2f", processes[index]->cpu_usage);
+    mvwprintw(win, y, x + 53, "%.2f", processes[index]->mem_usage);
+    mvwprintw(win, y, x + 60, "%.6s", formatTime(processes[index]->time));
+    mvwprintw(win, y, x + 68, "%10s", processes[index]->command);
 
     if (selected_row == index)
       wattroff(win, A_REVERSE);
@@ -304,7 +308,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   mvwprintw(win, *row - start_row, x + 46, "%.2f", process->cpu_usage);        // CPU 사용률 출력
   mvwprintw(win, *row - start_row, x + 53, "%.2f", process->mem_usage);        // 메모리 사용률 출력
   mvwprintw(win, *row - start_row, x + 60, "%.6s", formatTime(process->time)); // 실행 시간 출력
-
 
   // 명령어 출력 (트리 구조 적용)
   if (level > 0)
@@ -449,6 +452,8 @@ void run_ui(Process *processes[])
       processes[i] = NULL;
     }
   }
+  Process *selected_processes[MAX_PROCESSES] = {NULL}; // 출력된 프로세스를 저장
+  int process_count2 = 0; // 출력된 프로세스 수
 
   // 프로세스 리소스 읽어오는 함수
   read_resource(
@@ -489,15 +494,13 @@ void run_ui(Process *processes[])
   // wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
 
   // 프로세스 정보 출력
-  if (printby == -1)
+   if (printby == -1)
   {
     sort_list(processes, process_count, comparator);
     print_processes_list(process_win, selected_row, processes, process_count, process_height);
   }
   else if (printby == 1)
   {
-    Process *selected_processes[MAX_PROCESSES] = {NULL}; // 출력된 프로세스를 저장
-    int process_count2 = 0;                              // 출력된 프로세스 수
     memset(level_blank, 0, sizeof(level_blank));
     int row = 0; // 시작 행
     sort_tree(processes[0], comparator);
@@ -568,7 +571,11 @@ void run_ui(Process *processes[])
     break;
 
   case KEY_F(1): // F1 for search
-    search(bottom_win, processes, process_count);
+    if (printby == -1)
+      search(bottom_win, processes, process_count);
+    else if (printby == 1)
+      search(bottom_win, selected_processes, process_count2);
+
     break;
   case KEY_F(2): // F2 for change print method
     printby = -printby;
