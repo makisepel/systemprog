@@ -37,18 +37,15 @@ char *info[] = {
 };
 
 char *option[] = {
-    "F1 HELP ",
-    "F2 SETUP ",
-    "F3 Search ",
-    "F4 Tree ",
-    "F5 SortBy ",
-    "F6 NICE + ",
-    "F7 NICE - ",
-    "F8 KILL ",
-    "F9 QUIT ",
+    "F1 Search ",
+    "| F2 Tree  ",
+    "| F3 NICE +",
+    "| F4 NICE -",
+    "| F5 KILL  ",
+    "| F6 QUIT  ",
 };
 
-WINDOW *upper_win, *info_win, *process_win, *bottom_win;
+WINDOW *upper_win, *second_upper_win, *info_win, *process_win, *bottom_win;
 int highlight = 1;
 int choice = 0;
 int c;
@@ -61,7 +58,8 @@ int sort_order = 1; // 1 for ascending, -1 for descending
 int term_height, term_width;
 
 // Calculate window heights
-int upper_height = 7;
+int upper_height = 4;
+int second_upper_height = 5;
 int info_height = 1;
 int bottom_height = 1;
 
@@ -114,11 +112,24 @@ void print_upper(WINDOW *win)
   int x = 1; // X-coordinate padding
   int y = 1; // Y-coordinate padding
 
-  mvwprintw(win, y, x, "1");
-  mvwprintw(win, y + 1, x, "2");
-  mvwprintw(win, y + 2, x, "3");
-  mvwprintw(win, y + 3, x, "Mem");
-  mvwprintw(win, y + 4, x, "Swp");
+  mvwprintw(win, y, x, "WELCOME TO TASK MANAGER!");
+  mvwprintw(win, y + 1, x, "IF YOU WANT TO SORT, PLEASE ENTER AT GREEN ROW.");
+  wrefresh(win); // Refresh to display changes
+}
+
+void print_second_upper(WINDOW *win)
+{
+  box(win, 0, 0);
+  int x = 1; // X-coordinate padding
+  int y = 1; // Y-coordinate padding
+
+  mvwprintw(win, y , x, "SYSTEM INFORMATION");
+  mvwprintw(win, y + 1, x, 
+                "mem_used: %lu, mem_total: %lu, swap_used: %lu, swap total: %lu",
+                 mem_used, mem_total, swap_used, swap_total);
+  mvwprintw(win, y + 2, x, 
+                "Load average: %.2f, %.2f, %.2f, Uptime: %lf", 
+                  load_by_1min, load_by_5min, load_by_15min, uptime);
 
   wrefresh(win); // Refresh to display changes
 }
@@ -203,7 +214,7 @@ void print_bottom(WINDOW *win, int num_option)
   for (int i = 0; i < num_option; ++i)
   {
     mvwprintw(win, y, x, "%s", option[i]);
-    x += strlen(info[i]) + 7; // Add padding between info columns
+    x += strlen(info[i]) + 10; // Add padding between info columns
   }
   wrefresh(win); // Refresh to display changes
 }
@@ -250,13 +261,14 @@ void run_ui(Process *processes[])
 
   getmaxyx(stdscr, term_height, term_width);
 
-  int process_height = term_height - (upper_height + info_height + bottom_height);
+  int process_height = term_height - (upper_height + second_upper_height + info_height + bottom_height);
 
   // Create windows
   upper_win = newwin(upper_height, term_width, 0, 0);
-  info_win = newwin(info_height, term_width, upper_height, 0);
-  process_win = newwin(process_height, term_width, upper_height + info_height, 0);
-  bottom_win = newwin(bottom_height, term_width, upper_height + info_height + process_height, 0);
+  second_upper_win = newwin(second_upper_height, term_width, upper_height, 0);
+  info_win = newwin(info_height, term_width, upper_height + second_upper_height, 0);
+  process_win = newwin(process_height, term_width, upper_height + second_upper_height + info_height, 0);
+  bottom_win = newwin(bottom_height, term_width, upper_height + second_upper_height + info_height + process_height, 0);
 
   // Enable keypad
   keypad(stdscr, TRUE);
@@ -266,6 +278,7 @@ void run_ui(Process *processes[])
   // Print initial content for windows
   sort_list(processes, process_count, comparator);
   print_upper(upper_win);
+  print_second_upper(second_upper_win);
   wattron(info_win, COLOR_PAIR(1)); // Turn on color pair 1
   print_info(info_win, highlight, num_info);
   wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
@@ -350,13 +363,7 @@ void run_ui(Process *processes[])
     break;
   case KEY_F(5): // F5 for sort by
     break;
-  case KEY_F(6): // F6 for nice +
-    break;
-  case KEY_F(7): // F7 for nice -
-    break;
-  case KEY_F(8): // F8 for kill
-    break;
-  case KEY_F(9): // F9 to quit
+  case KEY_F(6): // F9 to quit
     endwin();
     exit(EXIT_SUCCESS);
     break;
