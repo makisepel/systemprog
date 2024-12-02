@@ -239,8 +239,9 @@ void print_processes_list(WINDOW *win, int selected_row, Process *processes[], i
     mvwprintw(win, y, x + 46, "%.2f", processes[index]->cpu_usage);
     mvwprintw(win, y, x + 53, "%.2f", processes[index]->mem_usage);
     mvwprintw(win, y, x + 60, "%.6s", formatTime(processes[index]->time));
-    mvwprintw(win, y, x + 68, "%10s", processes[index]->command);
-
+    mvwprintw(win, y - start_row, x + 68 , "%.71s",
+            strlen(processes[index]->command) < 71 ? processes[index]->command : strcat(processes[index]->command, "...")); // 명령어 출력
+    
     if (selected_row == index)
       wattroff(win, A_REVERSE);
     y++;
@@ -299,7 +300,7 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   }
 
   mvwprintw(win, *row - start_row, x, "%d", process->pid);
-  mvwprintw(win, *row - start_row, x + 6, "%.5s", process->user);              // 사용자 이름 출력
+  mvwprintw(win, *row - start_row, x + 6, "%.11s", process->user);             // 사용자 이름 출력
   mvwprintw(win, *row - start_row, x + 18, "%d", process->priority);           // 우선순위 출력
   mvwprintw(win, *row - start_row, x + 24, "%d", process->nice);               // NICE 값 출력
   mvwprintw(win, *row - start_row, x + 29, "%.6s", formatSize(process->virt)); // 가상 메모리 출력
@@ -308,32 +309,31 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   mvwprintw(win, *row - start_row, x + 46, "%.2f", process->cpu_usage);        // CPU 사용률 출력
   mvwprintw(win, *row - start_row, x + 53, "%.2f", process->mem_usage);        // 메모리 사용률 출력
   mvwprintw(win, *row - start_row, x + 60, "%.6s", formatTime(process->time)); // 실행 시간 출력
-
-  // 명령어 출력 (트리 구조 적용)
   if (level > 0)
   {
     for (int i = 0; i < level - 1; i++)
     {
       if (level_blank[i])
-        mvwprintw(win, *row - start_row, x + 63 + i * 4, "    "); // 상위 레벨 연결선
+        mvwprintw(win, *row - start_row, x + 68 + i * 4, "    "); // 상위 레벨 연결선
       else
-        mvwprintw(win, *row - start_row, x + 63 + i * 4, "│   "); // 상위 레벨 연결선
+        mvwprintw(win, *row - start_row, x + 68 + i * 4, "│   "); // 상위 레벨 연결선
     }
 
     if (process->parent && last_check == 1)
     {
-      mvwprintw(win, *row - start_row, x + 63 + (level - 1) * 4, "└── ");
+      mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "└── ");
       level_blank[level - 1] = 1;
     }
     else
     {
-      mvwprintw(win, *row - start_row, x + 63 + (level - 1) * 4, "├── ");
+      mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "├── ");
       level_blank[level - 1] = 0;
     }
   }
 
-  mvwprintw(win, *row - start_row, x + 63 + indent, "%.40s",
+  mvwprintw(win, *row - start_row, x + 68 + indent, "%.40s",
             strlen(process->command) < 40 ? process->command : strcat(process->command, "...")); // 명령어 출력
+
 
   if (*row == selected_row)
   {
