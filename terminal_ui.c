@@ -60,6 +60,7 @@ int current_window = 0; // 0 for info_win, 1 for process_win
 int (*comparator)(const void *, const void *) = compare_by_pid_asc;
 int sort_order = 1; // 1 for ascending, -1 for descending
 int term_height, term_width;
+int kill_check = KILL_FALSE;
 
 // Calculate window heights
 int upper_height = 7;
@@ -224,6 +225,14 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   // X좌표와 들여쓰기 처리
   int x = 0;              // 출력 시작 열
   int indent = level * 4; // 들여쓰기 공백 (트리 깊이에 따라 증가)
+
+  if (*row == selected_row) {
+    if (kill_check == KILL_TRUE) {
+      selected_row++;
+      kill_process(process->pid);
+      kill_check = KILL_FALSE;
+    }
+  }
 
   // 선택된 행 강조
   if (*row == selected_row)
@@ -533,7 +542,10 @@ void run_ui(Process *processes[])
     search(bottom_win, processes, process_count);
     break;
   case KEY_F(6): // F6 for kill
-    kill_process(processes[selected_row]->pid);
+    if (printby == -1)
+      kill_process(processes[selected_row]->pid);
+    else if (printby == 1) 
+      kill_check = KILL_TRUE;
     break;
   case KEY_F(7): // F7 to quit
     endwin();
