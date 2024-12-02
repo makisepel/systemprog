@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include "process.h"
 #include "terminal_ui.h"
 #include "proc_reader.h"
@@ -15,8 +16,23 @@
 
 extern Process *processes;
 
-int main()
-{
+void block_unnecessary_signals() {
+    sigset_t block_set;
+
+    sigemptyset(&block_set);
+    //sigaddset(&block_set, SIGINT);  // Ctrl+C
+    sigaddset(&block_set, SIGQUIT); // Ctrl+|
+    sigaddset(&block_set, SIGTSTP); // Ctrl+Z
+    sigaddset(&block_set, SIGHUP);  // Hangup
+
+    if (sigprocmask(SIG_BLOCK, &block_set, NULL) < 0) {
+        perror("sigprocmask failed");
+        exit(EXIT_FAILURE);
+    }
+}
+
+int main() {
+  block_unnecessary_signals();
   Process *processes[1024] = {0};
 
   initialize_ncurses_mode();

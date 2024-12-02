@@ -6,6 +6,7 @@ all: systop
 
 systop: $(OBJ)
 	$(CC) $(CFLAGS) -o systop $(OBJ) -lncursesw
+	@echo "시스템 우선순위 조정을 위해 Root 권한이 필요합니다: sudo ./systop"
 
 main.o: main.c process.h proc_reader.h print.h sort.h system_reader.h control.h terminal_ui.h
 	$(CC) $(CFLAGS) -c main.c
