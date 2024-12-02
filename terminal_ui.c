@@ -239,9 +239,8 @@ void print_processes_list(WINDOW *win, int selected_row, Process *processes[], i
     mvwprintw(win, y, x + 46, "%.2f", processes[index]->cpu_usage);
     mvwprintw(win, y, x + 53, "%.2f", processes[index]->mem_usage);
     mvwprintw(win, y, x + 60, "%.6s", formatTime(processes[index]->time));
-    mvwprintw(win, y - start_row, x + 68 , "%.71s",
-            strlen(processes[index]->command) < 71 ? processes[index]->command : strcat(processes[index]->command, "...")); // 명령어 출력
-    
+    mvwprintw(win, y, x + 68, "%.71s",
+              strlen(processes[index]->command) < 71 ? processes[index]->command : strcat(processes[index]->command, "...")); // 명령어 출력    
     if (selected_row == index)
       wattroff(win, A_REVERSE);
     y++;
