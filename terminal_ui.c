@@ -61,13 +61,48 @@ char *formatSize(unsigned long int size)
 {
   static char buffer[20];
   memset(buffer, 0, 20);
-  if (size >= 100000)
-    snprintf(buffer, sizeof(buffer), "%ldM", size / 1024);
+
+  if (size >= 1024 && size < 1048576)
+  {
+    // KB -> MB 변환
+    snprintf(buffer, sizeof(buffer), "%.2fM", (double)size / 1024);
+  }
+  else if (size >= 1048576)
+  {
+    // KB -> GB 변환
+    snprintf(buffer, sizeof(buffer), "%.2fG", (double)size / (1024 * 1024));
+  }
   else
-    snprintf(buffer, sizeof(buffer), "%lu", size);
+  {
+    // 1KB 미만 그대로 출력
+    snprintf(buffer, sizeof(buffer), "%.2fK", (double)size);
+  }
   return buffer;
 }
+// format for system resources_time.
+char *formatTime(double seconds)
+{
+  static char buffer[20];
+  memset(buffer, 0, sizeof(buffer));
 
+  if (seconds >= 3600)
+  {
+    // 1시간 이상일 경우 HH:MM:SS 형식
+    int hours = (int)(seconds / 3600);
+    int minutes = (int)(seconds / 60) % 60;
+    int secs = (int)fmod(seconds, 60);
+    snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", hours, minutes, secs);
+  }
+  else
+  {
+    // 1분 이상일 경우 MM:SS 형식
+    int minutes = (int)(seconds / 60);
+    int secs = (int)fmod(seconds, 60);
+    snprintf(buffer, sizeof(buffer), "%02d:%02d", minutes, secs);
+  }
+
+  return buffer;
+}
 // choose comparator based on highlight and sort_order
 int (*choose_comparator(int highlight, int sort_order))(const void *, const void *)
 {
@@ -112,21 +147,29 @@ void print_upper(WINDOW *win)
   wrefresh(win); // Refresh to display changes
 }
 
+
 void print_system(WINDOW *win)
 {
   box(win, 0, 0);
   int x = 1; // X-coordinate padding
   int y = 1; // Y-coordinate padding
+  init_pair(6, COLOR_RED, COLOR_BLACK);
 
+  wattron(win, COLOR_PAIR(6));
   mvwprintw(win, y, x, "SYSTEM INFORMATION");
-  mvwprintw(win, y + 1, x,
-            "mem_used: %lu, mem_total: %lu, swap_used: %lu, swap total: %lu",
-            mem_used, mem_total, swap_used, swap_total);
-  mvwprintw(win, y + 2, x,
-            "Load average: %.2f, %.2f, %.2f, Uptime: %lf",
-            load_by_1min, load_by_5min, load_by_15min, uptime);
+  wattroff(win, COLOR_PAIR(6));
 
-  wrefresh(win); // Refresh to display changes
+  mvwprintw(win, y + 1, x, "mem_used: %s", formatSize(mem_used));
+  mvwprintw(win, y + 1, x + 16, ",mem_total: %s", formatSize(mem_total));
+
+  mvwprintw(win, y + 1, x + 34, ",swap_used: %s", formatSize(swap_used));
+
+  mvwprintw(win, y + 1, x + 52, ",swap_total: %s", formatSize(swap_total));
+  mvwprintw(win, y + 2, x,
+            "Load average: %.2f, %.2f, %.2f, Uptime: %s",
+            load_by_1min, load_by_5min, load_by_15min, formatTime(uptime));
+
+  wrefresh(win); // 창 갱신
 }
 
 void print_info(WINDOW *win, int highlight, int num_info)
@@ -148,13 +191,19 @@ void print_info(WINDOW *win, int highlight, int num_info)
       wattroff(win, A_REVERSE);
     }
     else
+    {
       mvwprintw(win, y, x, "%s   ", info[i]);
+    }
+    if (i == 1)
+    {
+      x += strlen(info[i]) + 8;
+      continue;
+    }
     x += strlen(info[i]) + 3; // Add padding between menu items
   }
   wattroff(win, COLOR_PAIR(1) | A_BOLD);
   wrefresh(win); // Refresh to display changes
 }
-
 void print_processes_list(WINDOW *win, int selected_row, Process *processes[], int process_count, int height)
 {
   werase(win);
@@ -175,17 +224,17 @@ void print_processes_list(WINDOW *win, int selected_row, Process *processes[], i
       mvwhline(win, index - start_row, x, ' ', getmaxx(win));
     }
 
-    mvwprintw(win, y, x, "%d", processes[index]->pid);
-    mvwprintw(win, y, x + 6, "%.5s", processes[index]->user);
-    mvwprintw(win, y, x + 13, "%d", processes[index]->priority);
-    mvwprintw(win, y, x + 19, "%d", processes[index]->nice);
-    mvwprintw(win, y, x + 24, "%.6lu", processes[index]->virt);
-    mvwprintw(win, y, x + 31, "%.6lu", processes[index]->res);
-    mvwprintw(win, y, x + 37, "%c", processes[index]->state);
-    mvwprintw(win, y, x + 41, "%.2f", processes[index]->cpu_usage);
-    mvwprintw(win, y, x + 48, "%.2f", processes[index]->mem_usage);
-    mvwprintw(win, y, x + 55, "%lu", processes[index]->time);
-    mvwprintw(win, y, x + 63, "%-20s", processes[index]->command);
+      mvwprintw(win, y, x, "%d", processes[index]->pid);
+      mvwprintw(win, y, x + 6, "%.11s", processes[index]->user);
+      mvwprintw(win, y, x + 18, "%d", processes[index]->priority);
+      mvwprintw(win, y, x + 24, "%d", processes[index]->nice);
+      mvwprintw(win, y, x + 29, "%.6s", formatSize(processes[index]->virt));
+      mvwprintw(win, y, x + 36, "%.6s", formatSize(processes[index]->res));
+      mvwprintw(win, y, x + 43, "%c", processes[index]->state);
+      mvwprintw(win, y, x + 46, "%.2f", processes[index]->cpu_usage);
+      mvwprintw(win, y, x + 53, "%.2f", processes[index]->mem_usage);
+      mvwprintw(win, y, x + 60, "%.6s", formatTime(processes[index]->time));
+      mvwprintw(win, y, x + 68, "%-20s", processes[index]->command);
 
     if (selected_row == index)
       wattroff(win, A_REVERSE);
@@ -244,21 +293,17 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
     mvwhline(win, *row - start_row, x, ' ', getmaxx(win)); // 선택된 행을 전부 반전 처리
   }
 
-  // if (process->parent != NULL)
-  // {
-  //   mvwprintw(win, *row - start_row, x + 6, "%d", process->parent->pid);
-  //   mvwprintw(win, *row - start_row, x + 13, "%d", process->parent->child_count);
-  // }
   mvwprintw(win, *row - start_row, x, "%d", process->pid);
   mvwprintw(win, *row - start_row, x + 6, "%.5s", process->user);              // 사용자 이름 출력
-  mvwprintw(win, *row - start_row, x + 13, "%d", process->priority);           // 우선순위 출력
-  mvwprintw(win, *row - start_row, x + 19, "%d", process->nice);               // NICE 값 출력
-  mvwprintw(win, *row - start_row, x + 24, "%.6s", formatSize(process->virt)); // 가상 메모리 출력
-  mvwprintw(win, *row - start_row, x + 31, "%.6s", formatSize(process->res));  // 실제 메모리 출력
-  mvwprintw(win, *row - start_row, x + 37, "%c", process->state);              // 프로세스 상태 출력
-  mvwprintw(win, *row - start_row, x + 41, "%.2f", process->cpu_usage);        // CPU 사용률 출력
-  mvwprintw(win, *row - start_row, x + 48, "%.2f", process->mem_usage);        // 메모리 사용률 출력
-  mvwprintw(win, *row - start_row, x + 55, "%lu", process->time);              // 실행 시간 출력
+  mvwprintw(win, *row - start_row, x + 18, "%d", process->priority);           // 우선순위 출력
+  mvwprintw(win, *row - start_row, x + 24, "%d", process->nice);               // NICE 값 출력
+  mvwprintw(win, *row - start_row, x + 29, "%.6s", formatSize(process->virt)); // 가상 메모리 출력
+  mvwprintw(win, *row - start_row, x + 36, "%.6s", formatSize(process->res));  // 실제 메모리 출력
+  mvwprintw(win, *row - start_row, x + 43, "%c", process->state);              // 프로세스 상태 출력
+  mvwprintw(win, *row - start_row, x + 46, "%.2f", process->cpu_usage);        // CPU 사용률 출력
+  mvwprintw(win, *row - start_row, x + 53, "%.2f", process->mem_usage);        // 메모리 사용률 출력
+  mvwprintw(win, *row - start_row, x + 60, "%.6s", formatTime(process->time)); // 실행 시간 출력
+
 
   // 명령어 출력 (트리 구조 적용)
   if (level > 0)
