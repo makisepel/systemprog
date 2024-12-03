@@ -209,13 +209,14 @@ void print_info(WINDOW *win, int highlight, int num_info)
   wattroff(win, COLOR_PAIR(1) | A_BOLD);
   wrefresh(win); // Refresh to display changes
 }
+
 void print_processes_list(WINDOW *win, int selected_row, Process *processes[], int process_count, int height)
 {
   werase(win);
   int x = 0;
   int y = 0;
 
-  int start_row = selected_row < height ? 0 : selected_row - height + 1;
+  int start_row = selected_row < height ? 0 : selected_row - (selected_row % height);
 
   for (int i = 0; i < height; i++)
   {
@@ -239,20 +240,28 @@ void print_processes_list(WINDOW *win, int selected_row, Process *processes[], i
     mvwprintw(win, y, x + 46, "%.2f", processes[index]->cpu_usage);
     mvwprintw(win, y, x + 53, "%.2f", processes[index]->mem_usage);
     mvwprintw(win, y, x + 60, "%.6s", formatTime(processes[index]->time));
-    mvwprintw(win, y, x + 68, "%.71s",
-              strlen(processes[index]->command) < 71 ? processes[index]->command : strcat(processes[index]->command, "...")); // 명령어 출력    
+    int max_command_width = getmaxx(win) - x - 68; // 윈도우 너비에서 기존 열을 제외한 나머지 너비 계산
+    if (max_command_width > 0)
+    {
+      char truncated_command[max_command_width + 1];
+      snprintf(truncated_command, sizeof(truncated_command),
+               "%s%s",
+               strlen(processes[index]->command) > max_command_width ? processes[index]->command : processes[index]->command,
+               strlen(processes[index]->command) > max_command_width ? "..." : "");
+
+      mvwprintw(win, y, x + 68, "%s", truncated_command);
+    }
     if (selected_row == index)
       wattroff(win, A_REVERSE);
     y++;
   }
   wrefresh(win);
 }
-
 void print_processes_tree(WINDOW *win, Process *process, int level, int *row, int max_rows, Process **selected_processes, int *count, int last_check)
 {
   // 현재 출력 가능한 행 범위 계산
-  int start_row = selected_row < max_rows ? 0 : selected_row - max_rows + 1;
-  // 현재 행이 출력 범위를 벗어나면 무시
+  int start_row = selected_row < max_rows ? 0 : selected_row - (selected_row % max_rows);
+
   selected_processes[(*count)++] = process;
 
   if (process->parent && last_check == 1)
@@ -260,6 +269,7 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   else
     level_blank[level - 1] = 0;
 
+  // 현재 행이 출력 범위 전이면 건너뜀
   if (*row < start_row)
   {
     (*row)++;
@@ -274,7 +284,7 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   }
 
   if (*row >= start_row + max_rows)
-    (*row)++;
+  {
     for (int i = 0; i < process->child_count; i++)
     {
       if (process->child_count - 1 == i)
@@ -283,16 +293,17 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
         print_processes_tree(win, process->children[i], level + 1, row, max_rows, selected_processes, count, 0);
     }
     return;
+  }
 
   // X좌표와 들여쓰기 처리
   int x = 0;              // 출력 시작 열
   int indent = level * 4; // 들여쓰기 공백 (트리 깊이에 따라 증가)
 
+  // 선택된 행에 대한 kill 처리
   if (*row == selected_row)
   {
     if (kill_check == KILL_TRUE)
     {
-      selected_row++;
       kill_process(process->pid);
       kill_check = KILL_FALSE;
     }
@@ -304,7 +315,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
     wattron(win, A_REVERSE | A_BOLD);                      // 반전 효과
     mvwhline(win, *row - start_row, x, ' ', getmaxx(win)); // 선택된 행을 전부 반전 처리
   }
-
   mvwprintw(win, *row - start_row, x, "%d", process->pid);
   mvwprintw(win, *row - start_row, x + 6, "%.11s", process->user);             // 사용자 이름 출력
   mvwprintw(win, *row - start_row, x + 18, "%d", process->priority);           // 우선순위 출력
@@ -317,30 +327,48 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   mvwprintw(win, *row - start_row, x + 60, "%.6s", formatTime(process->time)); // 실행 시간 출력
   if (level > 0)
   {
+    // Calculate available width for tree visualization
+    int available_width = getmaxx(win) - (x + 68 + indent);
+
+    // Print tree connection lines
     for (int i = 0; i < level - 1; i++)
     {
+      if (i * 4 >= available_width)
+        break;
       if (level_blank[i])
-        mvwprintw(win, *row - start_row, x + 68 + i * 4, "    "); // 상위 레벨 연결선
+        mvwprintw(win, *row - start_row, x + 68 + i * 4, "    ");
       else
-        mvwprintw(win, *row - start_row, x + 68 + i * 4, "│   "); // 상위 레벨 연결선
+        mvwprintw(win, *row - start_row, x + 68 + i * 4, "│   ");
     }
 
-    if (process->parent && last_check == 1)
+    // Print tree branch indicator
+    if (level * 4 < available_width)
     {
-      mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "└── ");
-      level_blank[level - 1] = 1;
+      if (process->parent && last_check == 1)
+      {
+        mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "└── ");
+        level_blank[level - 1] = 1;
+      }
+      else
+      {
+        mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "├── ");
+        level_blank[level - 1] = 0;
+      }
     }
-    else
+
+    // Truncate command based on available width
+    if (available_width > 0)
     {
-      mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "├── ");
-      level_blank[level - 1] = 0;
+      char truncated_command[available_width + 1];
+      snprintf(truncated_command, sizeof(truncated_command),
+               "%.*s%s",
+               available_width,
+               process->command,
+               strlen(process->command) > available_width ? "..." : "");
+
+      mvwprintw(win, *row - start_row, x + 68 + indent, "%s", truncated_command);
     }
   }
-
-  mvwprintw(win, *row - start_row, x + 68 + indent, "%.40s",
-            strlen(process->command) < 40 ? process->command : strcat(process->command, "...")); // 명령어 출력
-
-
   if (*row == selected_row)
   {
     wattroff(win, A_REVERSE | A_BOLD); // 반전 효과 해제
@@ -459,7 +487,7 @@ void run_ui(Process *processes[])
     }
   }
   Process *selected_processes[MAX_PROCESSES] = {NULL}; // 출력된 프로세스를 저장
-  int process_count2 = 0; // 출력된 프로세스 수
+  int process_count2 = 0;                              // 출력된 프로세스 수
 
   // 프로세스 리소스 읽어오는 함수
   read_resource(
@@ -500,7 +528,7 @@ void run_ui(Process *processes[])
   // wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
 
   // 프로세스 정보 출력
-   if (printby == -1)
+  if (printby == -1)
   {
     sort_list(processes, process_count, comparator);
     print_processes_list(process_win, selected_row, processes, process_count, process_height);
@@ -586,6 +614,7 @@ void run_ui(Process *processes[])
 
     break;
   case KEY_F(2): // F2 for change print method
+    selected_row = 0;
     printby = -printby;
     break;
   case KEY_F(3): // F3 for nice +
