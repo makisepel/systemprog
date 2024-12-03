@@ -209,13 +209,14 @@ void print_info(WINDOW *win, int highlight, int num_info)
   wattroff(win, COLOR_PAIR(1) | A_BOLD);
   wrefresh(win); // Refresh to display changes
 }
+
 void print_processes_list(WINDOW *win, int selected_row, Process *processes[], int process_count, int height)
 {
   werase(win);
   int x = 0;
   int y = 0;
 
-  int start_row = selected_row < height ? 0 : selected_row - height + 1;
+  int start_row = selected_row < height ? 0 : selected_row - (selected_row % height);
 
   for (int i = 0; i < height; i++)
   {
@@ -251,7 +252,8 @@ void print_processes_list(WINDOW *win, int selected_row, Process *processes[], i
 void print_processes_tree(WINDOW *win, Process *process, int level, int *row, int max_rows, Process **selected_processes, int *count, int last_check)
 {
   // 현재 출력 가능한 행 범위 계산
-  int start_row = selected_row < max_rows ? 0 : selected_row - max_rows + 1;
+  int start_row = selected_row < max_rows ? 0 : selected_row - (selected_row % max_rows);
+
   // 현재 행이 출력 범위를 벗어나면 무시
   selected_processes[(*count)++] = process;
 
