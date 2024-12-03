@@ -540,7 +540,9 @@ void run_ui(Process *processes[])
   case KEY_DOWN:
     if (current_window == INFO_WINDOW)
       current_window = PROCESS_WINDOW;
-    if (selected_row < process_count - 1)
+    if (printby == -1 && selected_row < process_count - 1)
+      selected_row++;
+    else if (printby == 1 && selected_row < process_count2 - 1)
       selected_row++;
     break;
 
