@@ -249,8 +249,17 @@ void print_processes_list(WINDOW *win, int selected_row, Process *processes[], i
     mvwprintw(win, y, x + 46, "%.2f", processes[index]->cpu_usage);
     mvwprintw(win, y, x + 53, "%.2f", processes[index]->mem_usage);
     mvwprintw(win, y, x + 60, "%.6s", formatTime(processes[index]->time));
-    mvwprintw(win, y, x + 68, "%.71s",
-              strlen(processes[index]->command) < 71 ? processes[index]->command : strcat(processes[index]->command, "...")); // 명령어 출력
+    int max_command_width = getmaxx(win) - x - 68; // 윈도우 너비에서 기존 열을 제외한 나머지 너비 계산
+    if (max_command_width > 0)
+    {
+      char truncated_command[max_command_width + 1];
+      snprintf(truncated_command, sizeof(truncated_command),
+               "%s%s",
+               strlen(processes[index]->command) > max_command_width ? processes[index]->command : processes[index]->command,
+               strlen(processes[index]->command) > max_command_width ? "..." : "");
+
+      mvwprintw(win, y, x + 68, "%s", truncated_command);
+    }
     if (selected_row == index)
       wattroff(win, A_REVERSE);
     y++;
@@ -262,7 +271,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   // 현재 출력 가능한 행 범위 계산
   int start_row = selected_row < max_rows ? 0 : selected_row - (selected_row % max_rows);
 
-  // 현재 행이 출력 범위를 벗어나면 무시
   selected_processes[(*count)++] = process;
 
   if (process->parent && last_check == 1)
@@ -284,7 +292,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
     return;
   }
 
-  // 현재 행이 출력 범위를 벗어나면 중단
   if (*row >= start_row + max_rows)
   {
     for (int i = 0; i < process->child_count; i++)
@@ -329,29 +336,48 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   mvwprintw(win, *row - start_row, x + 60, "%.6s", formatTime(process->time)); // 실행 시간 출력
   if (level > 0)
   {
+    // Calculate available width for tree visualization
+    int available_width = getmaxx(win) - (x + 68 + indent);
+
+    // Print tree connection lines
     for (int i = 0; i < level - 1; i++)
     {
+      if (i * 4 >= available_width)
+        break;
       if (level_blank[i])
-        mvwprintw(win, *row - start_row, x + 68 + i * 4, "    "); // 상위 레벨 연결선
+        mvwprintw(win, *row - start_row, x + 68 + i * 4, "    ");
       else
-        mvwprintw(win, *row - start_row, x + 68 + i * 4, "│   "); // 상위 레벨 연결선
+        mvwprintw(win, *row - start_row, x + 68 + i * 4, "│   ");
     }
 
-    if (process->parent && last_check == 1)
+    // Print tree branch indicator
+    if (level * 4 < available_width)
     {
-      mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "└── ");
-      level_blank[level - 1] = 1;
+      if (process->parent && last_check == 1)
+      {
+        mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "└── ");
+        level_blank[level - 1] = 1;
+      }
+      else
+      {
+        mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "├── ");
+        level_blank[level - 1] = 0;
+      }
     }
-    else
+
+    // Truncate command based on available width
+    if (available_width > 0)
     {
-      mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "├── ");
-      level_blank[level - 1] = 0;
+      char truncated_command[available_width + 1];
+      snprintf(truncated_command, sizeof(truncated_command),
+               "%.*s%s",
+               available_width,
+               process->command,
+               strlen(process->command) > available_width ? "..." : "");
+
+      mvwprintw(win, *row - start_row, x + 68 + indent, "%s", truncated_command);
     }
   }
-
-  mvwprintw(win, *row - start_row, x + 68 + indent, "%.40s",
-            strlen(process->command) < 40 ? process->command : strcat(process->command, "...")); // 명령어 출력
-
   if (*row == selected_row)
   {
     wattroff(win, A_REVERSE | A_BOLD); // 반전 효과 해제
