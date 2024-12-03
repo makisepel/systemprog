@@ -22,10 +22,12 @@
 
 // process들을 받는 배열
 Process *processes;
+// system information을 받는 변수
 unsigned long mem_used, mem_total, swap_used, swap_total;
 float load_by_1min, load_by_5min, load_by_15min;
 double uptime;
 int level_blank[128];
+// process의 각 항목명
 char *info[] = {
     "PID",
     "USER",
@@ -40,6 +42,7 @@ char *info[] = {
     "COMMAND",
 };
 
+// UI 관련 변수
 WINDOW *upper_win, *system_win, *info_win, *process_win, *bottom_win;
 int highlight = 1;
 int printby = -1;
@@ -52,7 +55,7 @@ int sort_order = 1; // 1 for ascending, -1 for descending
 int term_height, term_width;
 int kill_check = KILL_FALSE;
 
-// Calculate window heights
+// UI 화면 계산용 변수
 int upper_height = 5;
 int system_info_height = 5;
 int info_height = 1;
@@ -104,7 +107,8 @@ char *formatTime(double seconds)
 
   return buffer;
 }
-// choose comparator based on highlight and sort_order
+
+// 정렬 기준에 따른 비교 함수 선택
 int (*choose_comparator(int highlight, int sort_order))(const void *, const void *)
 {
   switch (highlight)
@@ -136,23 +140,25 @@ int (*choose_comparator(int highlight, int sort_order))(const void *, const void
   }
 }
 
+// 상단부 window 출력
 void print_upper(WINDOW *win)
 {
   box(win, 0, 0);
-  int x = 1; // X-coordinate padding
-  int y = 1; // Y-coordinate padding
+  int x = 1; // X 좌표 패딩
+  int y = 1; // Y 좌표 패딩
 
   mvwprintw(win, y, x, "WELCOME TO TASK MANAGER!");
   mvwprintw(win, y + 1, x, "IF YOU WANT TO SORT, PLEASE ENTER AT GREEN ROW.");
   mvwprintw(win, y + 2, x, "F1: Search, F2: %s, F3: NICE +, F4: NICE -, F5: KILL, F6: QUIT", printby == -1 ? "Tree" : "List");
-  wrefresh(win); // Refresh to display changes
+  wrefresh(win); // 창 갱신
 }
 
+// system 정보 window 출력
 void print_system(WINDOW *win)
 {
   box(win, 0, 0);
-  int x = 1; // X-coordinate padding
-  int y = 1; // Y-coordinate padding
+  int x = 1; // X 좌표 패딩
+  int y = 1; // Y 좌표 패딩
   init_pair(6, COLOR_RED, COLOR_BLACK);
   init_pair(7, COLOR_BLUE, COLOR_BLACK);
 
@@ -179,11 +185,11 @@ void print_system(WINDOW *win)
 
 void print_info(WINDOW *win, int highlight, int num_info)
 {
-  int x = 0; // X-coordinate padding
-  int y = 0; // Y-coordinate padding
+  int x = 0; // X 좌표 패딩
+  int y = 0; // Y 좌표 패딩
 
   wattron(win, COLOR_PAIR(1) | A_BOLD);
-  mvwhline(win, y, x, ' ', getmaxx(win)); // Draw horizontal line
+  mvwhline(win, y, x, ' ', getmaxx(win));
   wattroff(win, COLOR_PAIR(1) | A_BOLD);
 
   wattron(win, COLOR_PAIR(1) | A_BOLD);
@@ -191,7 +197,7 @@ void print_info(WINDOW *win, int highlight, int num_info)
   {
     if (highlight == i + 1)
     {
-      wattron(win, A_REVERSE); // Highlight selected menu item
+      wattron(win, A_REVERSE); // 선택된 항목 강조
       mvwprintw(win, y, x, "%s", info[i]);
       wattroff(win, A_REVERSE);
     }
@@ -204,27 +210,30 @@ void print_info(WINDOW *win, int highlight, int num_info)
       x += strlen(info[i]) + 8;
       continue;
     }
-    x += strlen(info[i]) + 3; // Add padding between menu items
+    x += strlen(info[i]) + 3; // 다음 항목 출력을 위해 X 좌표 이동
   }
   wattroff(win, COLOR_PAIR(1) | A_BOLD);
-  wrefresh(win); // Refresh to display changes
+  wrefresh(win); // 창 갱신
 }
 
+// 프로세스 리스트 출력 함수
 void print_processes_list(WINDOW *win, int selected_row, Process *processes[], int process_count, int height)
 {
   werase(win);
   int x = 0;
   int y = 0;
 
+  // 현재 출력 가능한 행 범위 계산
   int start_row = selected_row < height ? 0 : selected_row - (selected_row % height);
 
+  // 프로세스 정보 출력
   for (int i = 0; i < height; i++)
   {
     int index = start_row + i;
-    if (index >= process_count)
+    if (index >= process_count) // 출력할 프로세스가 없으면 종료
       break;
 
-    if (selected_row == index)
+    if (selected_row == index) // 선택된 행 강조
     {
       wattron(win, A_REVERSE);
       mvwhline(win, index - start_row, x, ' ', getmaxx(win));
@@ -364,12 +373,14 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   level_blank[level - 1] = 0;
 }
 
+// bottom window 출력 함수
 void print_bottom(WINDOW *win, int num_option)
 {
   werase(win);
-  wrefresh(win); // Refresh to display changes
+  wrefresh(win); // 창 갱신
 }
 
+// search 함수
 void search(WINDOW *win, Process *processes[], int process_count)
 {
   werase(win);
@@ -438,17 +449,18 @@ void initialize_ncurses_mode()
 {
   setlocale(LC_ALL, ""); // 시스템 로케일 활성화
 
-  // Initialize ncurses mode
+  // ncurses mode 초기화
   initscr();
-  start_color();                          // Start color functionality
-  init_pair(1, COLOR_BLACK, COLOR_GREEN); // Initialize color pair 1 with green text on black background
+  start_color();  // color functionality 시작
+  init_pair(1, COLOR_BLACK, COLOR_GREEN); // color pair 1을  green text on black background로 초기화
   clear();
   noecho();
-  cbreak();             // Line buffering disabled
-  keypad(stdscr, TRUE); // Enable function keys
-  curs_set(0);          // Hide cursor
+  cbreak();             // Line buffering 비활성화
+  keypad(stdscr, TRUE); // Function keys 활성화
+  curs_set(0);          // 커서 숨기기
 }
 
+// UI 실행 함수
 void run_ui(Process *processes[])
 {
   // processes 배열 초기화
@@ -478,18 +490,20 @@ void run_ui(Process *processes[])
     exit(EXIT_FAILURE);
   }
 
+  // 터미널 크기 계산
   getmaxyx(stdscr, term_height, term_width);
 
+  // process_list의 화면 높이 계산
   int process_height = term_height - (upper_height + system_info_height + info_height + bottom_height);
 
-  // Create windows
+  // windows 생성
   upper_win = newwin(upper_height, term_width, 0, 0);
   system_win = newwin(system_info_height, term_width, upper_height, 0);
   info_win = newwin(info_height, term_width, upper_height + system_info_height, 0);
   process_win = newwin(process_height, term_width, upper_height + system_info_height + info_height, 0);
   bottom_win = newwin(bottom_height, term_width, upper_height + system_info_height + info_height + process_height, 0);
 
-  // Enable keypad
+  // keypad 활성화
   keypad(stdscr, TRUE);
   keypad(info_win, TRUE);
   keypad(process_win, TRUE);
@@ -497,9 +511,7 @@ void run_ui(Process *processes[])
   // 시스템 리소스 출력
   print_upper(upper_win);
   print_system(system_win);
-  // wattron(info_win, COLOR_PAIR(1) | A_BOLD); // Turn on color pair 1 and bold
   print_info(info_win, highlight, num_info);
-  // wattroff(info_win, COLOR_PAIR(1)); // Turn off color pair 1
 
   // 프로세스 정보 출력
   if (printby == -1)
@@ -534,14 +546,14 @@ void run_ui(Process *processes[])
   {
   case KEY_UP:
     if (current_window == INFO_WINDOW)
-      current_window = PROCESS_WINDOW;
+      current_window = PROCESS_WINDOW; // KEY_UP이면 PROCESS_WINDOW에서만 동작
     if (selected_row > 0)
       selected_row--;
     break;
 
   case KEY_DOWN:
     if (current_window == INFO_WINDOW)
-      current_window = PROCESS_WINDOW;
+      current_window = PROCESS_WINDOW; // KEY_DOWN이면 PROCESS_WINDOW에서만 동작
     if (printby == -1 && selected_row < process_count - 1)
       selected_row++;
     else if (printby == 1 && selected_row < process_count2 - 1)
@@ -550,7 +562,7 @@ void run_ui(Process *processes[])
 
   case KEY_LEFT:
     if (current_window == PROCESS_WINDOW)
-      current_window = INFO_WINDOW;
+      current_window = INFO_WINDOW; // KEY_LEFT이면 INFO_WINDOW에서만 동작
     if (highlight == 1)
       highlight = num_info;
     else
@@ -559,19 +571,19 @@ void run_ui(Process *processes[])
 
   case KEY_RIGHT:
     if (current_window == PROCESS_WINDOW)
-      current_window = INFO_WINDOW;
+      current_window = INFO_WINDOW; // KEY_RIGHT이면 INFO_WINDOW에서만 동작
     if (highlight == num_info)
       highlight = 1;
     else
       ++highlight;
     break;
 
-  case 9: // Tab key to switch windows
+  case 9: // windows간 창전환
     current_window = (current_window + 1) % 2;
     break;
 
   case '\n':
-  case KEY_ENTER:
+  case KEY_ENTER: // INFO_WINDOW에서 KEY_ENTER 입력 시 정렬
     if (current_window == INFO_WINDOW && highlight >= 1)
     {
       comparator = choose_comparator(highlight, sort_order);
