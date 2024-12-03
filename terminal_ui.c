@@ -274,8 +274,15 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   }
 
   if (*row >= start_row + max_rows)
-    return; // 화면 끝을 넘어서면 출력 종료
-  // 현재 프로세스를 출력 데이터에 저장
+    (*row)++;
+    for (int i = 0; i < process->child_count; i++)
+    {
+      if (process->child_count - 1 == i)
+        print_processes_tree(win, process->children[i], level + 1, row, max_rows, selected_processes, count, 1);
+      else
+        print_processes_tree(win, process->children[i], level + 1, row, max_rows, selected_processes, count, 0);
+    }
+    return;
 
   // X좌표와 들여쓰기 처리
   int x = 0;              // 출력 시작 열
