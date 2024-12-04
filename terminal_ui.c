@@ -355,25 +355,27 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   mvwprintw(win, *row - start_row, x + 60, "%.6s", formatTime(process->time)); // 실행 시간 출력
   
   // Tree 구조 연결 출력
-  for (int i = 0; i < level - 1; i++)
+  if (level > 0)
   {
-    if (level_blank[i])
-      mvwprintw(win, *row - start_row, x + 68 + i * 4, "    ");
+    for (int i = 0; i < level - 1; i++)
+    {
+      if (level_blank[i])
+        mvwprintw(win, *row - start_row, x + 68 + i * 4, "    ");
+      else
+        mvwprintw(win, *row - start_row, x + 68 + i * 4, "│   ");
+    }
+
+    if (process->parent && last_check == 1)
+    {
+      mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "└── ");
+      level_blank[level - 1] = 1;
+    }
     else
-      mvwprintw(win, *row - start_row, x + 68 + i * 4, "│   ");
+    {
+      mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "├── ");
+      level_blank[level - 1] = 0;
+    }
   }
-
-  if (process->parent && last_check == 1)
-  {
-    mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "└── ");
-    level_blank[level - 1] = 1;
-  }
-  else
-  {
-    mvwprintw(win, *row - start_row, x + 68 + (level - 1) * 4, "├── ");
-    level_blank[level - 1] = 0;
-  }
-
   // Command 출력 너비 조정
   int available_width = getmaxx(win) - (x + 68 + indent);
   if (available_width > 0)
