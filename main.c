@@ -20,7 +20,7 @@ void block_unnecessary_signals() {
     sigset_t block_set;
 
     sigemptyset(&block_set);
-    //sigaddset(&block_set, SIGINT);  // Ctrl+C
+    sigaddset(&block_set, SIGINT);  // Ctrl+C
     sigaddset(&block_set, SIGQUIT); // Ctrl+|
     sigaddset(&block_set, SIGTSTP); // Ctrl+Z
     sigaddset(&block_set, SIGHUP);  // Hangup
