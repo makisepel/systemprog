@@ -116,6 +116,7 @@ char *formatTime(double seconds) {
  */
 int (*choose_comparator(int highlight, int sort_order))(const void *, const void *) {
   switch (highlight) {
+
   case 1:
     return sort_order == ASCENDING ? compare_by_pid_asc : compare_by_pid_desc;
   case 2:
@@ -190,7 +191,8 @@ void print_system(WINDOW *win) {
             load_by_1min, load_by_5min, load_by_15min, formatTime(uptime));
   wattroff(win, COLOR_PAIR(7) | A_BOLD);
 
-  wrefresh(win); // 창 갱신
+
+  wrefresh(win); // Refresh to display changes
 }
 
 /**
@@ -359,6 +361,11 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   else
     wattron(win, COLOR_PAIR(9) | A_BOLD); // 녹색 스타일 적용
 
+  // if (process->parent != NULL)
+  // {
+  //   mvwprintw(win, *row - start_row, x + 6, "%d", process->parent->pid);
+  //   mvwprintw(win, *row - start_row, x + 13, "%d", process->parent->child_count);
+  // }
   mvwprintw(win, *row - start_row, x, "%d", process->pid);
   mvwprintw(win, *row - start_row, x + 6, "%.11s", process->user);             // 사용자 이름 출력
   mvwprintw(win, *row - start_row, x + 18, "%d", process->priority);           // 우선순위 출력
