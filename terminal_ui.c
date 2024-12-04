@@ -361,11 +361,6 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   else
     wattron(win, COLOR_PAIR(9) | A_BOLD); // 녹색 스타일 적용
 
-  // if (process->parent != NULL)
-  // {
-  //   mvwprintw(win, *row - start_row, x + 6, "%d", process->parent->pid);
-  //   mvwprintw(win, *row - start_row, x + 13, "%d", process->parent->child_count);
-  // }
   mvwprintw(win, *row - start_row, x, "%d", process->pid);
   mvwprintw(win, *row - start_row, x + 6, "%.11s", process->user);             // 사용자 이름 출력
   mvwprintw(win, *row - start_row, x + 18, "%d", process->priority);           // 우선순위 출력
