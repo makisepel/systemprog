@@ -1,7 +1,7 @@
 /*
     print.c는 Process 구조체들을 main.c에서 저장하는 processes 배열에 대해,
-    Sorting된 결과 구현 여부를 시각적으로 확인하기 위한 코드입니다.
-    TUI 구현에 있어서는 필요하지 않아, 자세한 설명은 생략합니다.
+    Sorting된 결과 구현 여부를 시각적으로 확인하기 위한 코드입니다. (stdout으로 출력)
+    TUI 구현에 있어서는 필요하지 않습니다.
 */
 
 #include <stdio.h>

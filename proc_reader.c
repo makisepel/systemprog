@@ -19,11 +19,9 @@
  * @param parent The parent process.
  * @param child The child process to be added.
  */
-void add_child(Process *parent, Process *child)
-{
+void add_child(Process *parent, Process *child) {
   parent->children = realloc(parent->children, sizeof(Process *) * (parent->child_count + 1));
-  if (!parent->children)
-  {
+  if (!parent->children) {
     perror("Failed to allocate memory for children");
     exit(EXIT_FAILURE);
   }
@@ -41,33 +39,26 @@ void add_child(Process *parent, Process *child)
  * @param total_ram The total RAM of the system (for calculating memory usage).
  * @param total_cpu_time The total CPU time of the system (for calculating CPU usage).
  */
-void link_userthread(Process *proc, Process **processes, int *cnt, unsigned long total_ram, unsigned long long total_cpu_time)
-{
-  if (!proc)
-    return;
+void link_userthread(Process *proc, Process **processes, int *cnt, unsigned long total_ram, unsigned long long total_cpu_time) {
+  if (!proc)  return;
   if (proc->children == NULL)
     proc->child_count = 0;
 
   char path[256];
   snprintf(path, sizeof(path), "/proc/%d/task", proc->pid);
   DIR *task_dir = opendir(path);
-  if (!task_dir)
-  {
+  if (!task_dir) {
     perror("Failed to open task directory");
     return;
   }
 
   struct dirent *entry;
-  while ((entry = readdir(task_dir)) != NULL)
-  {
-    if (isdigit(entry->d_name[0]))
-    {
+  while ((entry = readdir(task_dir)) != NULL) {
+    if (isdigit(entry->d_name[0])) {
       int tid = atoi(entry->d_name);
-      if (tid != proc->pid)
-      {
+      if (tid != proc->pid) {
         Process *child_thread = malloc(sizeof(Process));
-        if (!child_thread)
-        {
+        if (!child_thread) {
           perror("Failed to allocate memory for child thread");
           closedir(task_dir);
           return;
@@ -78,16 +69,14 @@ void link_userthread(Process *proc, Process **processes, int *cnt, unsigned long
 
         // child_thread 정보 저장
         child_thread->pid = tid;
-        if (read_process_info(child_thread) == 0)
-        {
+        if (read_process_info(child_thread) == 0) {
           processes[++(*cnt)] = child_thread; // processes 배열에 Userland Thread 추가
           child_thread->mem_usage = ((float)child_thread->res / (total_ram / 1024)) * 100.0;
           child_thread->cpu_usage = ((float)child_thread->time / total_cpu_time) * 100.0;
           add_child(proc, child_thread);
           child_thread->parent = proc;
         }
-        else
-        {
+        else {
           free(child_thread);
           child_thread = NULL;
         }
@@ -106,8 +95,7 @@ void link_userthread(Process *proc, Process **processes, int *cnt, unsigned long
  * @param proc The process structure to fill.
  * @return int Returns 0 on success, -1 on failure.
  */
-int read_process_info(Process *proc)
-{
+int read_process_info(Process *proc) {
   char path[256];
   FILE *file;
   proc->isKernalThread = 0;
@@ -118,16 +106,13 @@ int read_process_info(Process *proc)
    */
   snprintf(path, sizeof(path), "/proc/%d/cmdline", proc->pid);
   file = fopen(path, "r");
-  if (file)
-  {
-    if (fgets(proc->command, sizeof(proc->command), file) == NULL)
-    {
+  if (file) {
+    if (fgets(proc->command, sizeof(proc->command), file) == NULL) {
       proc->isKernalThread = 1;
     }
     fclose(file);
   }
-  else
-  { // TODO Throw Exception
+  else {
     strncpy(proc->command, "[unknown]", sizeof(proc->command));
   }
 
@@ -142,7 +127,7 @@ int read_process_info(Process *proc)
 
   char comm[256];
   unsigned long utime, stime, starttime;
-  fscanf(file, "%d (%[^)]) %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %d %d %*d %*u %lu",
+  fscanf(file, "%d %s %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %d %d %*d %*u %lu",
          &proc->pid,      // PID: 1st field
          comm,            // Command: 2nd field (wrapped in parentheses)
          &proc->state,    // State: 3rd field
@@ -152,6 +137,14 @@ int read_process_info(Process *proc)
          &proc->priority, // Priority: 18th field
          &proc->nice,     // Nice: 19th field
          &starttime);     // Start time: 22nd field
+
+  if (comm[0] == '(') {
+      int i = 1, j = 0;
+      while (comm[i] != '\0')
+          comm[j++] = comm[i++];
+      comm[j - 1] = '\0';
+  }
+
   if (proc->isKernalThread)
     strncpy(proc->command, comm, sizeof(proc->command));
   proc->time = (utime + stime) / sysconf(_SC_CLK_TCK);
@@ -173,34 +166,27 @@ int read_process_info(Process *proc)
    */
   char line[256];
   int uid = -1;
-  if (proc->isKernalThread)
-  {
+  if (proc->isKernalThread) {
     strncpy(proc->user, "root", sizeof(proc->user));
     proc->virt = 0;
     proc->res = 0;
     proc->shr = 0;
   }
-  else
-  {
-    while (fgets(line, sizeof(line), file))
-    {
-      if (strncmp(line, "Uid:", 4) == 0)
-      { // user name
+  else {
+    while (fgets(line, sizeof(line), file)) {
+      if (strncmp(line, "Uid:", 4) == 0) { // user name
         sscanf(line, "Uid: %d", &uid);
         struct passwd *pw = getpwuid(uid);
         if (pw)
           strncpy(proc->user, pw->pw_name, sizeof(proc->user));
       }
-      else if (strncmp(line, "VmSize:", 7) == 0)
-      { // virt
+      else if (strncmp(line, "VmSize:", 7) == 0) { // virt
         sscanf(line, "VmSize: %lu", &proc->virt);
       }
-      else if (strncmp(line, "VmRSS:", 6) == 0)
-      { // res
+      else if (strncmp(line, "VmRSS:", 6) == 0) { // res
         sscanf(line, "VmRSS: %lu", &proc->res);
       }
-      else if (strncmp(line, "RssFile:", 8) == 0)
-      { // shr
+      else if (strncmp(line, "RssFile:", 8) == 0) { // shr
         sscanf(line, "RssFile: %lu", &proc->shr);
       }
     }
@@ -215,8 +201,7 @@ int read_process_info(Process *proc)
  *
  * @return unsigned long long The total CPU time.
  */
-unsigned long long read_total_cpu_time()
-{
+unsigned long long read_total_cpu_time() {
   FILE *file = fopen("/proc/stat", "r");
   if (!file)
     return 0;
@@ -238,8 +223,7 @@ unsigned long long read_total_cpu_time()
  * @param max_count The maximum number of processes to read.
  * @return int The total number of processes read.
  */
-int get_all_processes(Process **processes, int max_count)
-{
+int get_all_processes(Process **processes, int max_count) {
   DIR *proc_dir = opendir("/proc");
   if (!proc_dir)
     return -1;
@@ -248,18 +232,14 @@ int get_all_processes(Process **processes, int max_count)
   int proc_count = 0;
   unsigned long long total_cpu_time = read_total_cpu_time();
   struct sysinfo info;
-  if (sysinfo(&info) == -1)
-  {
+  if (sysinfo(&info) == -1) {
     perror("sysinfo");
   }
 
-  while ((entry = readdir(proc_dir)) != NULL && proc_count < max_count)
-  {
-    if (isdigit(entry->d_name[0]))
-    {
+  while ((entry = readdir(proc_dir)) != NULL && proc_count < max_count) {
+    if (isdigit(entry->d_name[0])) {
       processes[proc_count] = malloc(sizeof(Process));
-      if (!processes[proc_count])
-      {
+      if (!processes[proc_count]) {
         perror("malloc error");
         closedir(proc_dir);
         return -1;
@@ -271,16 +251,12 @@ int get_all_processes(Process **processes, int max_count)
       processes[proc_count]->parent = NULL; // Add parent pointer initialization
 
       processes[proc_count]->pid = atoi(entry->d_name);
-      if (read_process_info(processes[proc_count]) == 0)
-      {
-        for (int i = 0; i < proc_count; i++)
-        {
-          if (processes[i]->pid == processes[proc_count]->ppid)
-          {
+      if (read_process_info(processes[proc_count]) == 0) {
+        for (int i = 0; i < proc_count; i++) {
+          if (processes[i]->pid == processes[proc_count]->ppid) {
             processes[i]->children = realloc(processes[i]->children,
                                              sizeof(Process *) * (processes[i]->child_count + 1));
-            if (!processes[i]->children)
-            {
+            if (!processes[i]->children) {
               perror("Failed to allocate memory for children array");
               free(processes[proc_count]);
               processes[proc_count] = NULL;
@@ -299,8 +275,7 @@ int get_all_processes(Process **processes, int max_count)
         link_userthread(processes[proc_count], processes, &proc_count, info.totalram, total_cpu_time);
         proc_count++;
       }
-      else
-      {
+      else {
         free(processes[proc_count]);
         processes[proc_count] = NULL;
       }
