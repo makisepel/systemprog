@@ -127,7 +127,7 @@ int read_process_info(Process *proc) {
 
   char comm[256];
   unsigned long utime, stime, starttime;
-  fscanf(file, "%d %s %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %d %d %*d %*u %lu",
+  fscanf(file, "%d (%[^)]) %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %d %d %*d %*u %lu",
          &proc->pid,      // PID: 1st field
          comm,            // Command: 2nd field (wrapped in parentheses)
          &proc->state,    // State: 3rd field
@@ -137,13 +137,27 @@ int read_process_info(Process *proc) {
          &proc->priority, // Priority: 18th field
          &proc->nice,     // Nice: 19th field
          &starttime);     // Start time: 22nd field
-
-  if (comm[0] == '(') {
-      int i = 1, j = 0;
-      while (comm[i] != '\0')
-          comm[j++] = comm[i++];
-      comm[j - 1] = '\0';
+  if (!isalpha(proc->state)) // 괄호 2쌍으로 둘러싸인 예외 처리 state 값이 알파벳이 아닌 값(ex..괄호)면 ((커맨드값)) 와 같은 쌍괄호 임을 인지. 문자열 하나로 읽어줌. 
+  {                          // 그리고 커널 스레드가 아니면 cmdline 에서 읽어 오기 때문에 stat 에서 읽은 comm 값을 쓰지 않음.
+            fseek(file, 0, SEEK_SET);
+    fscanf(file, "%d %s %c %d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %d %d %*d %*u %lu",
+           &proc->pid,      // PID
+           comm,            // 괄호 안 명령어
+           &proc->state,    // 상태
+           &proc->ppid,     // 부모 PID
+           &utime,          // 사용자 CPU 시간
+           &stime,          // 시스템 CPU 시간
+           &proc->priority, // 우선순위
+           &proc->nice,     // nice 값
+           &starttime);     // 시작 시간
   }
+  // 확인 후 삭제...
+  // if (comm[0] == '(') {
+  //     int i = 1, j = 0;
+  //     while (comm[i] != '\0')
+  //         comm[j++] = comm[i++];
+  //     comm[j - 1] = '\0';
+  // }
 
   if (proc->isKernalThread)
     strncpy(proc->command, comm, sizeof(proc->command));
