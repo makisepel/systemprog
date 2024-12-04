@@ -5,7 +5,7 @@ OBJ = main.o proc_reader.o print.o sort.o control.o system_reader.o terminal_ui.
 all: systop
 
 systop: $(OBJ)
-	$(CC) $(CFLAGS) -o systop $(OBJ) -lncursesw
+	$(CC) $(CFLAGS) -o systop $(OBJ) -lncursesw -lm
 	@echo "시스템 우선순위 조정을 위해 Root 권한이 필요합니다: sudo ./systop"
 
 main.o: main.c process.h proc_reader.h print.h sort.h system_reader.h control.h terminal_ui.h
