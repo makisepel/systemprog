@@ -576,12 +576,21 @@ void run_ui(Process *processes[]) {
     sort_list(processes, process_count, comparator);
     print_processes_list(process_win, selected_row, processes, process_count, process_height);
   }
-  else if (printby == 1) {
+  else if (printby == 1)
+  {
     memset(level_blank, 0, sizeof(level_blank));
     int row = 0; // 시작 행
-    sort_tree(processes[0], comparator);
-    print_processes_tree(process_win, processes[0], 0, &row, process_height, selected_processes, &process_count2, 0);
-    // print_processes_tree(process_win, processes[1], 0, &row, process_height, selected_processes, &process_count2, 0);
+    int find_initial = 0;
+    for (int i = 0; i < process_count; i++)
+    {
+      if (processes[i]->pid == 1 && find_initial == 0)
+      {
+        find_initial = 1;
+        sort_tree(processes[i], comparator);
+        print_processes_tree(process_win, processes[i], 0, &row, process_height, selected_processes, &process_count2, 0);
+        break;
+      }
+    }
   }
 
   print_bottom(bottom_win); // F1: Search용
