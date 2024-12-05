@@ -581,7 +581,7 @@ void run_ui(Process *processes[]) {
     int row = 0; // 시작 행
     sort_tree(processes[0], comparator);
     print_processes_tree(process_win, processes[0], 0, &row, process_height, selected_processes, &process_count2, 0);
-    print_processes_tree(process_win, processes[1], 0, &row, process_height, selected_processes, &process_count2, 0);
+    // print_processes_tree(process_win, processes[1], 0, &row, process_height, selected_processes, &process_count2, 0);
   }
 
   print_bottom(bottom_win); // F1: Search용
