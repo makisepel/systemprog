@@ -17,8 +17,6 @@
 #define DESCENDING -1
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define MAX_PROCESSES 1024
-#define KILL_TRUE 1
-#define KILL_FALSE 0
 
 // process들을 받는 배열
 Process *processes;
@@ -53,7 +51,6 @@ int current_window = 0; // 0 for info_win, 1 for process_win
 int (*comparator)(const void *, const void *) = compare_by_pid_asc;
 int sort_order = 1; // 1 for ascending, -1 for descending
 int term_height, term_width;
-int kill_check = KILL_FALSE;
 
 // UI 화면 계산용 변수
 int upper_height = 5;
@@ -345,13 +342,7 @@ void print_processes_tree(WINDOW *win, Process *process, int level, int *row, in
   int x = 0;              // 출력 시작 열
   int indent = level * 4; // 들여쓰기 공백 (트리 깊이에 따라 증가)
 
-  // 선택된 행에 대한 kill 처리
-  if (*row == selected_row) {
-    if (kill_check == KILL_TRUE) {
-      kill_process(process->pid);
-      kill_check = KILL_FALSE;
-    }
-  }
+   
 
   // 선택된 행 강조
   if (*row == selected_row) {
@@ -667,16 +658,22 @@ void run_ui(Process *processes[]) {
     printby = -printby;
     break;
   case KEY_F(3): // F3 for nice +
-    increase_nice(processes[selected_row]->pid);
+    if (printby == -1)
+      increase_nice(processes[selected_row]->pid);
+    else if (printby == 1)
+      increase_nice(selected_processes[selected_row]->pid);    
     break;
   case KEY_F(4): // F4 for nice -
-    decrease_nice(processes[selected_row]->pid);
+    if (printby == -1)
+      decrease_nice(processes[selected_row]->pid);
+    else if (printby == 1)
+      decrease_nice(selected_processes[selected_row]->pid);
     break;
   case KEY_F(5): // F5 for kill
     if (printby == -1)
       kill_process(processes[selected_row]->pid);
     else if (printby == 1)
-      kill_check = KILL_TRUE;
+      kill_process(selected_processes[selected_row]->pid);
     break;
   case KEY_F(6): // F6 to quit
     endwin();
