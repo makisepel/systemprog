@@ -1,4 +1,6 @@
 # 작업관리자 프로그램 for Linux
+## 시스템프로그래밍 004분반 Team 11 
+
 ## 프로젝트 주요 내용
 ### 실시간 시스템 모니터링
 ### 사용자 친화적 TUI
@@ -12,6 +14,11 @@
 
 ## 프로젝트 코드 요약
 ![Workflow Diagram (5) (1)](https://github.com/user-attachments/assets/228fa2d3-a548-45c5-80e0-291223d746fa)
+
+## 컴파일 방법
+Makefile로 편리한 컴파일 유도
+1) make
+2) ./systop 
 
 ## 시연영상 URL
 https://youtu.be/_lQLpL_llVU?si=g0c_-14tuGYZyjW_
