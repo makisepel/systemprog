@@ -13,9 +13,10 @@
 <img width="1146" alt="스크린샷 2024-12-06 오후 4 35 01" src="https://github.com/user-attachments/assets/d3d6432f-aab1-4605-8322-2593c6e4d473">
 
 ## 프로젝트 코드 요약
-![Workflow Diagram (5) (1)](https://github.com/user-attachments/assets/228fa2d3-a548-45c5-80e0-291223d746fa)
+![KakaoTalk_Photo_2024-12-06-18-20-28-1](https://github.com/user-attachments/assets/baed0546-4546-438d-9dcc-2aeda8c23b34)
 
 ## 컴파일 방법
+
 Makefile로 편리한 컴파일 유도
 1) make
 2) ./systop 
